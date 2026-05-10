@@ -32,6 +32,8 @@ export interface CharacterProfile {
   license_type?: CharacterLicense;
   version?: string;
   pack_format_version?: string;
+  // Draft flag
+  is_draft?: boolean;
 }
 
 /**

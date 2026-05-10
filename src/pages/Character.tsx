@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { TagInput } from "@/components/TagInput";
-import { updateCharacterProfile } from "@/lib/character";
+import { getCharacterById, updateCharacterProfile, rebuildFullProfileFromFlat, exportCharacterPack } from "@/lib/character";
 import { CharacterProfile } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

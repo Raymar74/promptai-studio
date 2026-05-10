@@ -53,11 +53,76 @@ export async function createCharacter(userId: string): Promise<CharacterProfile>
 }
 
 /**
+ * Guarda o actualiza un borrador de personaje en Supabase.
+ * Usa is_draft = true y guarda todo en full_profile JSONB.
+ */
+export async function upsertDraftCharacter(
+  userId: string,
+  fullProfile: any,
+  existingCharacterId?: string
+): Promise<CharacterProfile> {
+  const name = fullProfile?.identidad?.nombre || "Borrador sin nombre";
+  const occupation = fullProfile?.identidad?.rol_principal || "";
+
+  if (existingCharacterId) {
+    const { data: updated, error } = await supabase
+      .from("character_profiles")
+      .update({
+        name,
+        occupation,
+        full_profile: fullProfile,
+        is_draft: true,
+        updated_at: new Date().toISOString(),
+      } as any)
+      .eq("id", existingCharacterId)
+      .eq("user_id", userId)
+      .select("*")
+      .single();
+
+    if (error) throw error;
+    return updated as CharacterProfile;
+  } else {
+    const { data: created, error } = await supabase
+      .from("character_profiles")
+      .insert({
+        user_id: userId,
+        creator_id: userId,
+        name,
+        occupation,
+        description: "",
+        voice_tone: "",
+        catchphrases: [],
+        avoid_words: [],
+        references_list: [],
+        lora_trigger: "",
+        style_words: "",
+        camera_templates: "",
+        default_humor: 50,
+        wpm: 140,
+        notes: "",
+        full_profile: fullProfile,
+        is_draft: true,
+        version: "1.0",
+      } as any)
+      .select("*")
+      .single();
+
+    if (error) throw error;
+    return created as CharacterProfile;
+  }
+}
+
+/**
  * Called from CharacterForgePage after the wizard completes.
  * Saves all AI-generated fields to the flat columns AND stores the full
  * CharacterProfileSchema object in the `full_profile` JSONB column.
+ * Si existingCharacterId existe, actualiza ese registro y marca is_draft = false.
  */
-export async function saveCharacterProfile(userId: string, fullProfile: any): Promise<CharacterProfile> {
+export async function saveCharacterProfile(
+  userId: string,
+  fullProfile: any,
+  existingCharacterId?: string
+): Promise<CharacterProfile> {
   const name = fullProfile?.identidad?.nombre || "Nuevo Personaje";
   const occupation = fullProfile?.identidad?.rol_principal || "";
   const description = fullProfile?.apariencia?.descripcion_fisica || "";
@@ -88,32 +153,50 @@ export async function saveCharacterProfile(userId: string, fullProfile: any): Pr
   if (fullProfile?.gesticulacion?.gestos_tipicos?.length)
     notesParts.push(`Gestos típicos: ${fullProfile.gesticulacion.gestos_tipicos.join(", ")}`);
 
-  const { data: created, error } = await supabase
-    .from("character_profiles")
-    .insert({
-      user_id: userId,
-      creator_id: userId,
-      name,
-      occupation,
-      description,
-      voice_tone: voiceTone,
-      catchphrases: fullProfile?.voz_y_lenguaje?.latiguillos || [],
-      avoid_words: fullProfile?.dialecto?.exclusiones_dialectales || [],
-      references_list: [],
-      lora_trigger: "",
-      style_words: fullProfile?.apariencia?.prompt_visual_base || "",
-      camera_templates: "",
-      default_humor: fullProfile?.humor?.intensidad || 50,
-      wpm,
-      notes: notesParts.join("\n"),
-      full_profile: fullProfile,
-      version: "1.0",
-    } as any)
-    .select("*")
-    .single();
+  const payload = {
+    name,
+    occupation,
+    description,
+    voice_tone: voiceTone,
+    catchphrases: fullProfile?.voz_y_lenguaje?.latiguillos || [],
+    avoid_words: fullProfile?.dialecto?.exclusiones_dialectales || [],
+    references_list: [],
+    lora_trigger: "",
+    style_words: fullProfile?.apariencia?.prompt_visual_base || "",
+    camera_templates: "",
+    default_humor: fullProfile?.humor?.intensidad || 50,
+    wpm,
+    notes: notesParts.join("\n"),
+    full_profile: fullProfile,
+    is_draft: false,
+    version: "1.0",
+  } as any;
 
-  if (error) throw error;
-  return created as CharacterProfile;
+  if (existingCharacterId) {
+    const { data: updated, error } = await supabase
+      .from("character_profiles")
+      .update(payload)
+      .eq("id", existingCharacterId)
+      .eq("user_id", userId)
+      .select("*")
+      .single();
+
+    if (error) throw error;
+    return updated as CharacterProfile;
+  } else {
+    const { data: created, error } = await supabase
+      .from("character_profiles")
+      .insert({
+        user_id: userId,
+        creator_id: userId,
+        ...payload,
+      } as any)
+      .select("*")
+      .single();
+
+    if (error) throw error;
+    return created as CharacterProfile;
+  }
 }
 
 // ── Export / Import ──────────────────────────────────────────────────────────
@@ -217,10 +300,46 @@ export function rebuildFullProfileFromFlat(c: CharacterProfile): any {
       ...(existing.humor ?? {}),
       intensidad: c.default_humor,
     },
-    apariencia: {
-      ...(existing.apariencia ?? {}),
-      descripcion_fisica: c.description,
-      prompt_visual_base: c.style_words,
-    },
-  };
-}
+     apariencia: {
+       ...(existing.apariencia ?? {}),
+       descripcion_fisica: c.description,
+       prompt_visual_base: c.style_words,
+     },
+   };
+ }
+
+ /**
+  * Actualiza un personaje existente desde el Editor Manual.
+  * Usado por Character.tsx.
+  */
+ export async function updateCharacterProfile(c: CharacterProfile): Promise<CharacterProfile> {
+   const { data: updated, error } = await supabase
+     .from("character_profiles")
+     .update({
+       name: c.name,
+       occupation: c.occupation,
+       description: c.description,
+       voice_tone: c.voice_tone,
+       catchphrases: c.catchphrases,
+       avoid_words: c.avoid_words,
+       references_list: c.references_list,
+       lora_trigger: c.lora_trigger,
+       style_words: c.style_words,
+       camera_templates: c.camera_templates,
+       default_humor: c.default_humor,
+       wpm: c.wpm,
+       notes: c.notes,
+       full_profile: c.full_profile,
+       is_draft: false,
+       version: c.version ?? "1.0",
+       license_type: c.license_type ?? "personal",
+       visibility: c.visibility ?? "private",
+       updated_at: new Date().toISOString(),
+     } as any)
+     .eq("id", c.id)
+     .select("*")
+     .single();
+
+   if (error) throw error;
+   return updated as CharacterProfile;
+ }

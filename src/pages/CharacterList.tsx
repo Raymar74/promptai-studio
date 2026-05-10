@@ -5,6 +5,7 @@ import { getCharacters, createCharacter, importCharacterPack } from "@/lib/chara
 import { CharacterProfile, CharacterPackExport } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Plus, UserCog, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
@@ -97,15 +98,29 @@ export default function CharacterListPage() {
           {characters.map((c) => (
             <Link key={c.id} to={`/character/${c.id}`}>
               <Card className="p-6 h-full flex flex-col items-center text-center border-primary/10 hover:border-primary/40 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300 group">
-                <div className="w-24 h-24 mb-4 rounded-full bg-background border-2 border-border group-hover:border-primary/50 transition-colors overflow-hidden flex items-center justify-center relative shadow-sm">
-                  {c.reference_image_url ? (
-                    <img src={c.reference_image_url} alt={c.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <UserCog className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
-                  )}
-                </div>
-                <h3 className="font-display text-xl mb-1 group-hover:text-primary transition-colors">{c.name}</h3>
-                <p className="text-sm text-muted-foreground">{c.occupation || "Sin ocupación"}</p>
+                 <div className="w-24 h-24 mb-4 rounded-full bg-background border-2 border-border group-hover:border-primary/50 transition-colors overflow-hidden flex items-center justify-center relative shadow-sm">
+                   {c.reference_image_url ? (
+                     <img src={c.reference_image_url} alt={c.name} className="w-full h-full object-cover" />
+                   ) : (
+                     <UserCog className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
+                   )}
+                   {c.is_draft && (
+                     <div className="absolute top-0 right-0">
+                       <Badge variant="secondary" className="bg-amber-500/20 text-amber-400 border-amber-500/30">
+                         BORRADOR
+                       </Badge>
+                     </div>
+                   )}
+                 </div>
+                 <div className="flex items-center gap-2 mb-1">
+                   <h3 className="font-display text-xl group-hover:text-primary transition-colors">{c.name}</h3>
+                   {c.is_draft && (
+                     <Badge variant="outline" className="text-xs h-5 bg-amber-500/10 text-amber-400 border-amber-500/30">
+                       Incompleto
+                     </Badge>
+                   )}
+                 </div>
+                 <p className="text-sm text-muted-foreground">{c.occupation || "Sin ocupación"}</p>
               </Card>
             </Link>
           ))}

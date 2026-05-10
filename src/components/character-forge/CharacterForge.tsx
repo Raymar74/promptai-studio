@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CharacterProfileSchema, createEmptyDraftCharacter } from '@/types/character';
-import { Sparkles, Save, X, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
+import { Sparkles, Save, X, ArrowRight, ArrowLeft, Loader2, Cloud } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { generateCharacterProfile } from '@/lib/gemini';
+import { upsertDraftCharacter, getCharacterById } from '@/lib/character';
+import { CharacterProfile } from '@/lib/types';
 
 import { Step1Identity } from './Step1Identity';
 import { Step2Psychology } from './Step2Psychology';
@@ -16,29 +18,44 @@ import { Step4Appearance } from './Step4Appearance';
 import { Step5Rules } from './Step5Rules';
 
 const DRAFT_KEY = 'character_forge_draft';
+const DRAFT_ID_KEY = 'character_forge_draft_id';
 
 function loadDraftFromStorage(): Partial<CharacterProfileSchema> {
   try {
     const raw = localStorage.getItem(DRAFT_KEY);
     if (raw) return JSON.parse(raw);
-  } catch {}
+  } catch {
+    // Intencionalmente vacío - fallback a createEmptyDraftCharacter
+  }
   return createEmptyDraftCharacter();
 }
 
+function loadDraftIdFromStorage(): string | null {
+  try {
+    return localStorage.getItem(DRAFT_ID_KEY);
+  } catch {
+    // Intencionalmente vacío - fallback a null
+  }
+  return null;
+}
+
 interface CharacterForgeProps {
-  onComplete: (character: CharacterProfileSchema) => void;
+  userId: string;
+  onComplete: (character: CharacterProfileSchema, draftCharacterId?: string) => void;
   onCancel: () => void;
 }
 
-export function CharacterForge({ onComplete, onCancel }: CharacterForgeProps) {
+export function CharacterForge({ userId, onComplete, onCancel }: CharacterForgeProps) {
   const nav = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 5;
-  const [hasDraftRecovered] = useState(() => !!localStorage.getItem(DRAFT_KEY));
+  const [hasDraftRecovered, setHasDraftRecovered] = useState(() => !!localStorage.getItem(DRAFT_KEY));
   const [draft, setDraft] = useState<Partial<CharacterProfileSchema>>(loadDraftFromStorage);
+  const [draftCharacterId, setDraftCharacterId] = useState<string | null>(loadDraftIdFromStorage);
   
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const updateDraft = (section: keyof CharacterProfileSchema, data: any) => {
     setDraft((prev) => ({
@@ -50,12 +67,36 @@ export function CharacterForge({ onComplete, onCancel }: CharacterForgeProps) {
     }));
   };
 
+  const handleSaveDraftToCloud = async (stayOnPage: boolean = false) => {
+    setIsSaving(true);
+    try {
+      const saved = await upsertDraftCharacter(userId, draft, draftCharacterId ?? undefined);
+      
+      if (!draftCharacterId) {
+        setDraftCharacterId(saved.id);
+        localStorage.setItem(DRAFT_ID_KEY, saved.id);
+      }
+      
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      toast.success(`Borrador guardado en la nube${stayOnPage ? '' : ' - puedes continuar luego'}`);
+      
+      if (!stayOnPage) {
+        setShowExitDialog(false);
+        onCancel();
+      }
+    } catch (e: any) {
+      console.error(e);
+      toast.error('No se pudo guardar en la nube: ' + (e.message || 'Error desconocido'));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleNext = () => {
     if (currentStep < totalSteps) {
       setCurrentStep(c => c + 1);
     } else {
-      // Finish
-      onComplete(draft as CharacterProfileSchema);
+      onComplete(draft as CharacterProfileSchema, draftCharacterId ?? undefined);
     }
   };
 
@@ -68,18 +109,17 @@ export function CharacterForge({ onComplete, onCancel }: CharacterForgeProps) {
   };
 
   const handleSaveDraft = () => {
-    try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-      toast.success('Borrador guardado. Se recuperará la próxima vez que entres al Forge.');
-    } catch {
-      toast.error('No se pudo guardar el borrador.');
-    }
-    setShowExitDialog(false);
-    onCancel();
+    handleSaveDraftToCloud(false);
+  };
+
+  const handleQuickSave = () => {
+    handleSaveDraftToCloud(true);
   };
 
   const handleDiscard = () => {
     localStorage.removeItem(DRAFT_KEY);
+    localStorage.removeItem(DRAFT_ID_KEY);
+    setDraftCharacterId(null);
     onCancel();
   };
 
@@ -171,11 +211,15 @@ export function CharacterForge({ onComplete, onCancel }: CharacterForgeProps) {
           </Button>
 
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => setShowExitDialog(true)}>
+            <Button variant="outline" onClick={handleQuickSave} disabled={isSaving}>
+              {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Cloud className="w-4 h-4 mr-2" />}
+              Guardar
+            </Button>
+            <Button variant="secondary" onClick={() => setShowExitDialog(true)} disabled={isGenerating}>
               <Sparkles className="w-4 h-4 mr-2 text-yellow-400" />
               Autocompletar con IA
             </Button>
-            <Button onClick={handleNext} className="bg-indigo-600 hover:bg-indigo-700">
+            <Button onClick={handleNext} className="bg-indigo-600 hover:bg-indigo-700" disabled={isGenerating || isSaving}>
               {currentStep === totalSteps ? 'Finalizar' : 'Siguiente'} <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
