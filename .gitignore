@@ -40,3 +40,9 @@ dist-ssr
 # OS
 .DS_Store
 Thumbs.db
+
+# Supabase CLI temp files
+supabase/.temp/
+
+# Database backups (no deberian estar en el repo)
+docs/backups/

@@ -37,7 +37,7 @@ npm install
 ### 2. Variables de entorno (`.env`)
 ```env
 VITE_SUPABASE_URL="https://tu-proyecto.supabase.co"
-VITE_SUPABASE_ANON_KEY="tu-anon-key-publica"
+VITE_SUPABASE_PUBLISHABLE_KEY="tu-anon-key-publica"
 VITE_GEMINI_API_KEY="AIzaSy..."   # Fallback — el usuario puede sobreescribirla en Ajustes
 ```
 
@@ -315,14 +315,20 @@ El archivo `vercel.json` configura un rewrite SPA (`/* → /index.html`) para qu
 
 Variables de entorno requeridas en Vercel:
 - `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
 - `VITE_GEMINI_API_KEY` (opcional, el usuario puede configurar la suya en Ajustes)
 
 ---
+
+## Lo que SÍ hace
+
+- ✅ **Multi-plataforma**: Genera paquetes para Reel/Video, Carrusel de Instagram, e Hilo de Twitter/X.
+- ✅ **Guardar borrador**: Guarda perfiles de personaje incompletos como borradores en Supabase.
+- ✅ **Character Forge**: Genera perfiles completos de personajes usando IA.
+- ✅ **Content Forge**: Genera guiones y prompts de contenido para personajes.
 
 ## Lo que la App NO hace
 
 - ❌ No genera imágenes ni videos finales — entrega prompts para usar en ComfyUI, LTX, Runway, Luma, etc.
 - ❌ No publica en redes automáticamente — el usuario copia y pega.
 - ❌ No entrena ni modifica LoRAs.
-- ❌ No tiene soporte multi-plataforma (carrusel, hilo) aún — la generación actual produce solo paquetes de video.

@@ -13,6 +13,7 @@ El proyecto está en **producción activa** en Vercel. Las funcionalidades core 
 - Guard de rutas privadas (`RequireAuth`).
 
 ### ✅ Gestión de Personajes
+- **Guardar borrador:** Guarda perfiles incompletos como borradores en Supabase (columna `is_draft`).
 - **Character Forge (Wizard):** 5 pasos para construir un perfil psicológico completo.
   - Paso 1: Identidad base (nombre, edad, género, nacionalidad, rol, filosofía).
   - Paso 2: Psicología profunda (arquetipos junguianos, sombra, motivación real vs visible).
@@ -26,12 +27,13 @@ El proyecto está en **producción activa** en Vercel. Las funcionalidades core 
 - Galería de personajes con thumbnails y avatares.
 
 ### ✅ Generador de Paquetes de Contenido
+- **Multi-plataforma:** Genera paquetes para 3 formatos:
+  - **Reel/Video:** Guion + Shots I2V (formato tradicional)
+  - **Carrusel:** Slides con `image_prompt`, `overlay_text`, `alt_text`
+  - **Hilo (X/LinkedIn):** Posts con `content`, `is_hook`, `is_cta`
 - Selección de personaje activo.
 - Configuración de tema, duraciones (total y por clip), Factor WPM y Intensidad de Rasgos Psicológicos.
 - Generación de paquetes vía Gemini 2.5 Flash con JSON estructurado.
-- Guion con 3 partes (hook, desarrollo, punchline + voiceover completo).
-- Array de shots I2V con estructura de 4 bloques (Sujeto, Visual, Diálogo, Sonido).
-- Cover image prompt con trigger LoRA, cover I2V prompt, caption y hashtags.
 - Guardado automático en Supabase → redirección a vista detallada.
 
 ### ✅ Biblioteca y Vista de Packs
@@ -53,8 +55,8 @@ El proyecto está en **producción activa** en Vercel. Las funcionalidades core 
 ## Pendiente / Próximos pasos
 
 ### Prioridad alta
-- [ ] **Soporte multi-plataforma en el generador:** El schema de `content_packs` ya tiene un campo `platform`, pero la UI actual solo genera paquetes de "video". Implementar generación de Carruseles e Hilos (X/LinkedIn).
-- [ ] **Guardar borrador en Character Forge:** El botón "Guardar borrador" actualmente solo hace `console.log`. Implementar persistencia real (localStorage o Supabase).
+- [x] **Soporte multi-plataforma en el generador:** Genera paquetes para Reel/Video, Carrusel de Instagram, e Hilo de Twitter/X.
+- [x] **Guardar borrador en Character Forge:** Guarda perfiles incompletos como borradores en Supabase (columna `is_draft`).
 - [ ] **Verificación del sistema de Feedback:** Confirmar que el endpoint de Formspree esté activo y recibiendo mensajes en producción.
 
 ### Prioridad media

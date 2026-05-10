@@ -29,7 +29,8 @@ ALTER TABLE public.character_profiles
   ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'private',
   ADD COLUMN IF NOT EXISTS license_type TEXT NOT NULL DEFAULT 'personal',
   ADD COLUMN IF NOT EXISTS version TEXT NOT NULL DEFAULT '1.0',
-  ADD COLUMN IF NOT EXISTS pack_format_version TEXT NOT NULL DEFAULT '1';
+  ADD COLUMN IF NOT EXISTS pack_format_version TEXT NOT NULL DEFAULT '1',
+  ADD COLUMN IF NOT EXISTS is_draft BOOLEAN NOT NULL DEFAULT false;
 
 -- Set creator_id = user_id for any existing rows
 UPDATE public.character_profiles SET creator_id = user_id WHERE creator_id IS NULL;
@@ -125,3 +126,44 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
   CREATE POLICY "char-refs delete own" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'character-refs' AND auth.uid()::text = (storage.foldername(name))[1]);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- 6. Character History table (for version snapshots)
+CREATE TABLE IF NOT EXISTS public.character_history (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  character_id UUID NOT NULL REFERENCES public.character_profiles(id) ON DELETE CASCADE,
+  profile_snapshot JSONB NOT NULL,
+  version TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_character_history_char_id ON public.character_history (character_id);
+
+-- 7. Voice References Storage Bucket
+INSERT INTO storage.buckets (id, name, public) VALUES ('character-voices', 'character-voices', true) ON CONFLICT (id) DO NOTHING;
+
+DO $$ BEGIN
+  CREATE POLICY "char-voices read public" ON storage.objects FOR SELECT USING (bucket_id = 'character-voices');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "char-voices insert own" ON storage.objects FOR INSERT TO authenticated
+  WITH CHECK (bucket_id = 'character-voices' AND auth.uid()::text = (storage.foldername(name))[1]);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "char-voices update own" ON storage.objects FOR UPDATE TO authenticated
+  USING (bucket_id = 'character-voices' AND auth.uid()::text = (storage.foldername(name))[1]);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "char-voices delete own" ON storage.objects FOR DELETE TO authenticated
+  USING (bucket_id = 'character-voices' AND auth.uid()::text = (storage.foldername(name))[1]);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- Additional Indexes
+CREATE INDEX IF NOT EXISTS idx_chars_visibility ON public.character_profiles(visibility) WHERE visibility != 'private';
+
+-- Comments
+COMMENT ON COLUMN public.character_profiles.full_profile IS 'Perfil completo CharacterProfileSchema en JSONB (del Character Forge)';
+COMMENT ON COLUMN public.character_profiles.is_draft IS 'Indica si el personaje es un borrador incompleto';
+COMMENT ON COLUMN public.character_profiles.creator_id IS 'ID del creador original (para marketplace)';
