@@ -182,7 +182,7 @@ const videoPackSchema = {
 const carouselPackSchema = {
   type: Type.OBJECT,
   properties: {
-    platform: { type: Type.STRING, const: "carousel" },
+    platform: { type: Type.STRING, enum: ["carousel"] },
     title: { type: Type.STRING, description: "Título corto e ingenioso" },
     summary: { type: Type.STRING, description: "Resumen de 1-2 frases" },
     slides: {
@@ -213,7 +213,7 @@ const carouselPackSchema = {
 const threadPackSchema = {
   type: Type.OBJECT,
   properties: {
-    platform: { type: Type.STRING, const: "thread" },
+    platform: { type: Type.STRING, enum: ["thread"] },
     title: { type: Type.STRING, description: "Título corto e ingenioso" },
     summary: { type: Type.STRING, description: "Resumen de 1-2 frases" },
     posts: {
