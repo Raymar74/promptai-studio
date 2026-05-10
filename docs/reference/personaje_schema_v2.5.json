@@ -1,0 +1,864 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "personaje_schema_v2.5",
+  "titulo": "Ficha Técnica de Identidad Sintética — Schema Universal v2.5",
+  "descripcion": "Arquitectura estándar para definir personajes con base psicológica profunda, destinados a alimentar motores de generación de guiones con IA. Fusión de psicometría operativa, narrativa de personaje y especificaciones de producción.",
+  "nivel_descripcion": {
+    "basico": "Campos mínimos para generación coherente de guiones. Obligatorios para todos los personajes.",
+    "avanzado": "Campos de profundidad psicológica y narrativa. Recomendados para personajes protagonistas o recurrentes."
+  },
+
+  "bloques": {
+
+    "bloque_0_metadata": {
+      "nivel": "basico",
+      "descripcion": "Control de versión y trazabilidad de la ficha.",
+      "campos": {
+        "id": {
+          "tipo": "string",
+          "formato": "snake_case",
+          "ejemplo": "analia_v1",
+          "descripcion": "Identificador único del personaje. Nunca se repite.",
+          "requerido": true
+        },
+        "version_ficha": {
+          "tipo": "string",
+          "ejemplo": "2.5",
+          "descripcion": "Versión del schema utilizado.",
+          "requerido": true
+        },
+        "fecha_creacion": {
+          "tipo": "string",
+          "formato": "YYYY-MM-DD",
+          "requerido": true
+        },
+        "fecha_ultima_modificacion": {
+          "tipo": "string",
+          "formato": "YYYY-MM-DD",
+          "requerido": false
+        },
+        "tipo_personaje": {
+          "tipo": "enum",
+          "valores": ["protagonista", "secundario", "recurrente", "episodico", "antagonista"],
+          "requerido": true
+        },
+        "nivel_dificultad_ia": {
+          "tipo": "enum",
+          "valores": ["bajo", "medio", "alto", "extremo"],
+          "descripcion": "Indica cuán complejo es mantener la coherencia de este personaje para un modelo de lenguaje.",
+          "requerido": true
+        },
+        "estado": {
+          "tipo": "enum",
+          "valores": ["borrador", "validado", "produccion", "archivado"],
+          "requerido": true
+        },
+        "notas_desarrollo": {
+          "tipo": "string",
+          "descripcion": "Notas libres para el equipo humano. No se inyectan al prompt.",
+          "requerido": false
+        }
+      }
+    },
+
+    "bloque_1_identidad": {
+      "nivel": "basico",
+      "descripcion": "Quién es el personaje en el mundo real. Define el léxico técnico y las reglas gramaticales base.",
+      "campos": {
+        "nombre": {
+          "tipo": "string",
+          "requerido": true
+        },
+        "nombre_completo": {
+          "tipo": "string",
+          "descripcion": "Nombre completo incluyendo apellidos si existen.",
+          "requerido": false
+        },
+        "alias": {
+          "tipo": "array",
+          "items": "string",
+          "descripcion": "Apodos, nombres de usuario, nombres artísticos.",
+          "requerido": false
+        },
+        "edad": {
+          "tipo": "integer",
+          "requerido": true
+        },
+        "edad_aparente": {
+          "tipo": "integer",
+          "descripcion": "Edad que proyecta visualmente. Puede diferir de la real.",
+          "requerido": false
+        },
+        "genero": {
+          "tipo": "string",
+          "descripcion": "Texto libre. Incluir pronombres si es relevante.",
+          "requerido": true
+        },
+        "nacionalidad": {
+          "tipo": "string",
+          "requerido": true
+        },
+        "region_especifica": {
+          "tipo": "string",
+          "ejemplo": "Buenos Aires (porteña)",
+          "descripcion": "Ciudad, región o zona cultural específica. Afina el dialecto.",
+          "requerido": false
+        },
+        "rol_principal": {
+          "tipo": "string",
+          "ejemplo": "Profesora de Física / Divulgadora científica",
+          "descripcion": "Oficio o función que define su léxico técnico dominante.",
+          "requerido": true
+        },
+        "roles_secundarios": {
+          "tipo": "array",
+          "items": "string",
+          "descripcion": "Otros roles que desempeña y que pueden activarse según el contexto.",
+          "requerido": false
+        },
+        "filosofia_declarada": {
+          "tipo": "string",
+          "descripcion": "Lo que el personaje diría que cree. Su misión en sus propias palabras.",
+          "requerido": true
+        }
+      }
+    },
+
+    "bloque_2_nucleo_psicologico": {
+      "nivel": "basico",
+      "descripcion": "El motor interno del personaje. Define por qué hace lo que hace y cómo reacciona bajo presión. Es el bloque más crítico para la coherencia de largo plazo.",
+      "campos": {
+        "arquetipo_primario": {
+          "tipo": "enum",
+          "valores": [
+            "Héroe", "Rebelde", "Sabio", "Bufón", "Cuidador", "Explorador",
+            "Amante", "Gobernante", "Creador", "Inocente", "Forajido", "Mago",
+            "Mártir", "Seductor", "Estratega", "Superviviente", "Devoto",
+            "Nihilista", "Trickster", "Sombra"
+          ],
+          "descripcion": "Arquetipo dominante. Define el modo habitual de operar.",
+          "requerido": true
+        },
+        "arquetipo_en_tension": {
+          "tipo": "enum",
+          "valores": [
+            "Héroe", "Rebelde", "Sabio", "Bufón", "Cuidador", "Explorador",
+            "Amante", "Gobernante", "Creador", "Inocente", "Forajido", "Mago",
+            "Mártir", "Seductor", "Estratega", "Superviviente", "Devoto",
+            "Nihilista", "Trickster", "Sombra"
+          ],
+          "descripcion": "Arquetipo que choca con el primario. Fuente del conflicto interno del personaje.",
+          "requerido": true
+        },
+        "sombra_junguiana": {
+          "tipo": "enum",
+          "valores": [
+            "Héroe", "Rebelde", "Sabio", "Bufón", "Cuidador", "Explorador",
+            "Amante", "Gobernante", "Creador", "Inocente", "Forajido", "Mago",
+            "Mártir", "Seductor", "Estratega", "Superviviente", "Devoto",
+            "Nihilista", "Trickster", "Sombra"
+          ],
+          "descripcion": "Lo que el personaje rechaza de sí mismo pero actúa inconscientemente bajo presión extrema.",
+          "requerido": true
+        },
+        "creencia_nuclear": {
+          "tipo": "string",
+          "descripcion": "La frase que el personaje diría sobre el mundo si fuera completamente honesto. Todo su comportamiento orbita alrededor de esta frase. Ejemplo: 'Nadie se queda' / 'El poder es lo único real'.",
+          "requerido": true
+        },
+        "motivacion_visible": {
+          "tipo": "string",
+          "descripcion": "Lo que el personaje dice que quiere. Su objetivo declarado.",
+          "requerido": true
+        },
+        "motivacion_real": {
+          "tipo": "string",
+          "descripcion": "Lo que realmente busca sin saberlo o sin admitirlo. Puede contradecir la motivación visible.",
+          "requerido": true
+        },
+        "contradiccion_central": {
+          "tipo": "string",
+          "formato": "Quiere [X] pero actúa como si quisiera [Y]",
+          "descripcion": "La tensión interna que genera subtexto. Sin esto, el personaje es predecible.",
+          "requerido": true
+        },
+        "mecanismo_defensa_dominante": {
+          "tipo": "enum",
+          "valores": [
+            "Negación", "Proyección", "Racionalización", "Disociación",
+            "Humor", "Control", "Represión", "Sublimación", "Idealización",
+            "Desplazamiento", "Intelectualización", "Regresión"
+          ],
+          "descripcion": "Cómo evita enfrentar lo que le duele. Define su comportamiento en escenas de conflicto.",
+          "requerido": true
+        },
+        "detonante_de_quiebre": {
+          "tipo": "string",
+          "descripcion": "La situación específica que rompe su estado habitual. Sin esto, la IA genera un personaje que solo existe en su modo 'on'.",
+          "requerido": true
+        }
+      }
+    },
+
+    "bloque_3_psicometria": {
+      "nivel": "basico",
+      "descripcion": "Ejes cuantificables de comportamiento y personalidad. Escala 0-100. Son las 'constantes' del personaje que la IA puede interpolar en cualquier situación.",
+      "escala_global": "0-100",
+      "nota": "Para cada eje bipolar, 0 representa el polo izquierdo y 100 el polo derecho. Valores centrales (40-60) indican equilibrio o ambigüedad intencional.",
+      "campos": {
+        "ejes_temperamentales": {
+          "proactividad": {
+            "tipo": "integer",
+            "rango": [0, 100],
+            "polos": ["Pasivo (0)", "Proactivo (100)"],
+            "requerido": true
+          },
+          "analiticidad": {
+            "tipo": "integer",
+            "rango": [0, 100],
+            "polos": ["Impulsivo (0)", "Analítico (100)"],
+            "requerido": true
+          },
+          "sociabilidad": {
+            "tipo": "integer",
+            "rango": [0, 100],
+            "polos": ["Introvertido (0)", "Extravertido (100)"],
+            "requerido": true
+          },
+          "hostilidad": {
+            "tipo": "integer",
+            "rango": [0, 100],
+            "polos": ["Abierto (0)", "Hostil (100)"],
+            "requerido": true
+          },
+          "estabilidad_emocional": {
+            "tipo": "integer",
+            "rango": [0, 100],
+            "polos": ["Volátil (0)", "Estoico (100)"],
+            "requerido": true
+          },
+          "brujula_moral": {
+            "tipo": "integer",
+            "rango": [0, 100],
+            "polos": ["Caótico (0)", "Honorable (100)"],
+            "requerido": true
+          }
+        },
+        "traits_expresivos": {
+          "descripcion": "Rasgos cuantificables que definen la expresión pública del personaje.",
+          "carisma": { "tipo": "integer", "rango": [0, 100], "requerido": true },
+          "inteligencia_percibida": { "tipo": "integer", "rango": [0, 100], "requerido": true },
+          "sensualidad": { "tipo": "integer", "rango": [0, 100], "requerido": true },
+          "irreverencia": { "tipo": "integer", "rango": [0, 100], "requerido": true },
+          "elegancia": { "tipo": "integer", "rango": [0, 100], "requerido": true },
+          "intensidad_humor": { "tipo": "integer", "rango": [0, 100], "requerido": true },
+          "confianza": { "tipo": "integer", "rango": [0, 100], "requerido": true },
+          "empatia": { "tipo": "integer", "rango": [0, 100], "requerido": true },
+          "agresividad_verbal": { "tipo": "integer", "rango": [0, 100], "requerido": true },
+          "autenticidad": { "tipo": "integer", "rango": [0, 100], "requerido": true },
+          "vulgaridad_controlada": { "tipo": "integer", "rango": [0, 100], "requerido": true },
+          "dramaturgia_temporal": {
+            "tipo": "integer",
+            "rango": [0, 100],
+            "descripcion": "Capacidad de usar el timing dramático: pausas, silencios, aceleración.",
+            "requerido": true
+          },
+          "cercania_dialectal": {
+            "tipo": "integer",
+            "rango": [0, 100],
+            "descripcion": "Intensidad con que usa los marcadores de su dialecto. 100 = máximo regional.",
+            "requerido": true
+          }
+        }
+      }
+    },
+
+    "bloque_4_voz_y_lenguaje": {
+      "nivel": "basico",
+      "descripcion": "Todo lo que define cómo suena el personaje. Es la capa más visible de la identidad.",
+      "campos": {
+        "tono_general": {
+          "tipo": "string",
+          "descripcion": "Descripción libre del tono dominante. Puede ser múltiple.",
+          "ejemplo": "Cercano, juguetón, seductor, ligeramente confidente",
+          "requerido": true
+        },
+        "tono_tags": {
+          "tipo": "array",
+          "items": {
+            "tipo": "enum",
+            "valores": [
+              "Seductor", "Rasposo", "Autoritario", "Infantil", "Irónico",
+              "Cálido", "Clínico", "Conspirativo", "Didáctico", "Melancólico",
+              "Explosivo", "Susurrante", "Sarcástico", "Solemne", "Juguetón"
+            ]
+          },
+          "descripcion": "Tags seleccionables para procesamiento automático.",
+          "requerido": true
+        },
+        "registro": {
+          "tipo": "enum",
+          "valores": [
+            "Formal académico",
+            "Coloquial culto",
+            "Coloquial popular",
+            "Técnico especializado",
+            "Callejero",
+            "Híbrido (especificar)"
+          ],
+          "requerido": true
+        },
+        "registro_detalle": {
+          "tipo": "string",
+          "descripcion": "Descripción libre si el registro es híbrido o necesita matiz.",
+          "requerido": false
+        },
+        "cadencia_sintactica": {
+          "tipo": "enum",
+          "valores": [
+            "Frases cortas y cortantes",
+            "Períodos largos con subordinadas",
+            "Fragmentado e interrumpido",
+            "Circular (vuelve siempre al punto inicial)",
+            "Híbrido (alterna según estado emocional)"
+          ],
+          "requerido": true
+        },
+        "velocidad_habla_wpm": {
+          "tipo": "integer",
+          "descripcion": "Palabras por minuto aproximadas. Referencia: lento < 120, normal 130-160, rápido > 170.",
+          "requerido": false
+        },
+        "latiguillos": {
+          "tipo": "array",
+          "items": "string",
+          "minItems": 3,
+          "maxItems": 7,
+          "descripcion": "Frases o palabras que el personaje usa con frecuencia. OBLIGATORIO incluirlas en cada guion generado.",
+          "requerido": true
+        },
+        "muletillas": {
+          "tipo": "array",
+          "items": "string",
+          "descripcion": "Palabras de relleno o pausas verbales. Dan naturalidad.",
+          "requerido": false
+        },
+        "caracteristicas_habla": {
+          "tipo": "array",
+          "items": "string",
+          "descripcion": "Lista de rasgos cualitativos del habla. Ej: 'Usa pausas dramáticas antes de punchlines'.",
+          "requerido": true
+        },
+        "filtros_lenguaje": {
+          "tipo": "object",
+          "campos": {
+            "permite_groserias": { "tipo": "boolean", "requerido": true },
+            "permite_tecnicismos": { "tipo": "boolean", "requerido": true },
+            "permite_jerga_callejera": { "tipo": "boolean", "requerido": true },
+            "permite_eufemismos": { "tipo": "boolean", "requerido": true },
+            "ironia_constante": { "tipo": "boolean", "requerido": true },
+            "notas_adicionales": { "tipo": "string", "requerido": false }
+          },
+          "requerido": true
+        }
+      }
+    },
+
+    "bloque_5_dialecto": {
+      "nivel": "basico",
+      "descripcion": "Especificación técnica del dialecto. Es el campo con mayor impacto en la autenticidad percibida del personaje.",
+      "campos": {
+        "tipo_dialecto": {
+          "tipo": "string",
+          "ejemplo": "Porteño argentino (Rioplatense)",
+          "requerido": true
+        },
+        "intensidad": {
+          "tipo": "integer",
+          "rango": [0, 100],
+          "descripcion": "Qué tan marcado es el dialecto. 0 = neutro, 100 = máximo regional.",
+          "requerido": true
+        },
+        "caracteristicas": {
+          "tipo": "array",
+          "items": "string",
+          "descripcion": "Rasgos fonológicos, gramaticales y léxicos específicos.",
+          "ejemplo": ["Voseo: 'sabés', 'tenés'", "Yeísmo rehilado", "Uso de 'che' como vocativo"],
+          "requerido": true
+        },
+        "marcadores_obligatorios": {
+          "tipo": "array",
+          "items": "string",
+          "descripcion": "Palabras o construcciones que DEBEN aparecer para validar la autenticidad del dialecto.",
+          "requerido": true
+        },
+        "exclusiones_dialectales": {
+          "tipo": "array",
+          "items": "string",
+          "descripcion": "Palabras, construcciones o regionalismos de OTROS dialectos que NUNCA debe usar. Campo crítico para evitar contaminación dialectal.",
+          "ejemplo": ["NO usar 'tú'", "NO usar 'mijo'", "NO usar 'weón'", "NO usar 'chévere'"],
+          "requerido": true
+        }
+      }
+    },
+
+    "bloque_6_humor": {
+      "nivel": "basico",
+      "descripcion": "Especificación del sistema humorístico del personaje. El humor es identidad, no decoración.",
+      "campos": {
+        "intensidad": {
+          "tipo": "integer",
+          "rango": [0, 100],
+          "descripcion": "0 = sin humor, 100 = comedia pura.",
+          "requerido": true
+        },
+        "tipos_activos": {
+          "tipo": "array",
+          "items": {
+            "tipo": "enum",
+            "valores": [
+              "Negro", "Absurdo", "Sarcástico", "Irónico", "Autodeprecativo",
+              "Doble sentido", "Situacional", "Referencial", "Físico", "Conceptual"
+            ]
+          },
+          "requerido": true
+        },
+        "tecnicas": {
+          "tipo": "array",
+          "items": "string",
+          "descripcion": "Mecanismos específicos que usa para construir el humor.",
+          "ejemplo": ["Subversión de expectativas", "Analogía con lectura paralela", "Complicidad directa con el espectador"],
+          "requerido": true
+        },
+        "prohibiciones": {
+          "tipo": "array",
+          "items": "string",
+          "descripcion": "Tipos de humor que NUNCA debe usar. Tan importante como lo que sí usa.",
+          "ejemplo": ["NUNCA humor a costa de minorías", "NUNCA chiste explicado", "NUNCA vulgar gratuito"],
+          "requerido": true
+        }
+      }
+    },
+
+    "bloque_7_dimension_humana": {
+      "nivel": "basico",
+      "descripcion": "Lo que genera conexión emocional y realismo. Diferencia un personaje funcional de uno memorable.",
+      "campos": {
+        "vicio_defecto": {
+          "tipo": "string",
+          "descripcion": "Su mayor debilidad operativa. Algo que hace regularmente y que le juega en contra.",
+          "requerido": true
+        },
+        "miedo_trauma": {
+          "tipo": "string",
+          "descripcion": "Lo que evita mencionar o le genera inseguridad real.",
+          "requerido": true
+        },
+        "peculiaridad_tic": {
+          "tipo": "string",
+          "descripcion": "Rasgo físico o manía observable. Ancla de coherencia para la IA.",
+          "requerido": true
+        },
+        "objeto_talismán": {
+          "tipo": "string",
+          "descripcion": "Objeto que siempre lleva o usa. Opcional pero altamente efectivo para la coherencia visual.",
+          "requerido": false
+        }
+      }
+    },
+
+    "bloque_8_apariencia": {
+      "nivel": "basico",
+      "descripcion": "Definición visual del personaje. Especialmente crítica para personajes con presencia en video o imagen.",
+      "campos": {
+        "descripcion_fisica": {
+          "tipo": "string",
+          "descripcion": "Descripción narrativa completa del aspecto físico.",
+          "requerido": true
+        },
+        "elementos_identitarios": {
+          "tipo": "array",
+          "items": "string",
+          "descripcion": "Rasgos visuales que NUNCA pueden faltar. Son la firma visual del personaje.",
+          "requerido": true
+        },
+        "outfit_base": {
+          "tipo": "object",
+          "campos": {
+            "superior": { "tipo": "string", "requerido": false },
+            "inferior": { "tipo": "string", "requerido": false },
+            "capa_exterior": { "tipo": "string", "requerido": false },
+            "calzado": { "tipo": "string", "requerido": false },
+            "variaciones_permitidas": { "tipo": "array", "items": "string", "requerido": false },
+            "prohibiciones_outfit": { "tipo": "array", "items": "string", "requerido": false }
+          },
+          "requerido": true
+        },
+        "accesorios": {
+          "tipo": "array",
+          "items": "string",
+          "descripcion": "Accesorios habituales. Marcar cuáles son obligatorios.",
+          "requerido": false
+        },
+        "maquillaje_estetica": {
+          "tipo": "string",
+          "requerido": false
+        },
+        "prompt_visual_base": {
+          "tipo": "string",
+          "descripcion": "String de prompt optimizado para generadores de imagen (Stable Diffusion, Midjourney, etc.).",
+          "ejemplo": "Photorealistic, highly detailed face, 8k, cinematic lighting, shallow depth of field",
+          "requerido": false
+        }
+      }
+    },
+
+    "bloque_9_gesticulacion": {
+      "nivel": "basico",
+      "descripcion": "Lenguaje corporal y gestual. Define cómo el cuerpo acompaña la voz.",
+      "campos": {
+        "gestos_tipicos": {
+          "tipo": "array",
+          "items": "string",
+          "descripcion": "Gestos recurrentes que identifican al personaje.",
+          "requerido": true
+        },
+        "lenguaje_corporal_dominante": {
+          "tipo": "string",
+          "descripcion": "Descripción del patrón corporal general.",
+          "requerido": true
+        },
+        "prohibiciones_gestuales": {
+          "tipo": "array",
+          "items": "string",
+          "descripcion": "Movimientos o posturas que rompen la coherencia del personaje.",
+          "requerido": false
+        }
+      }
+    },
+
+    "bloque_10_produccion": {
+      "nivel": "basico",
+      "descripcion": "Especificaciones técnicas de producción visual y de contenido.",
+      "campos": {
+        "entorno_habitual": {
+          "tipo": "string",
+          "descripcion": "El espacio donde suele aparecer el personaje.",
+          "requerido": true
+        },
+        "iluminacion": {
+          "tipo": "string",
+          "requerido": false
+        },
+        "paleta_colores": {
+          "tipo": "string",
+          "requerido": false
+        },
+        "angulos_camara": {
+          "tipo": "array",
+          "items": "string",
+          "requerido": false
+        },
+        "notas_tecnicas_produccion": {
+          "tipo": "array",
+          "items": "string",
+          "requerido": false
+        }
+      }
+    },
+
+    "bloque_11_formato_contenido": {
+      "nivel": "basico",
+      "descripcion": "Cómo opera el personaje dentro de los formatos de contenido. Crítico para que la IA sepa en qué estructura generar.",
+      "campos": {
+        "formatos_soportados": {
+          "tipo": "array",
+          "items": {
+            "tipo": "enum",
+            "valores": [
+              "Video corto (Reels/TikTok)",
+              "Video largo (YouTube)",
+              "Podcast",
+              "Entrevista",
+              "Monólogo",
+              "Diálogo con otro personaje",
+              "Tutorial",
+              "Storytelling",
+              "Debate",
+              "Live/Stream"
+            ]
+          },
+          "requerido": true
+        },
+        "estructura_base_guion": {
+          "tipo": "string",
+          "descripcion": "Estructura narrativa habitual del contenido. Ej: Hook → Desarrollo → Punchline → CTA.",
+          "requerido": true
+        },
+        "duracion_objetivo": {
+          "tipo": "object",
+          "campos": {
+            "minimo_segundos": { "tipo": "integer", "requerido": false },
+            "maximo_segundos": { "tipo": "integer", "requerido": false },
+            "optimo_segundos": { "tipo": "integer", "requerido": false }
+          },
+          "requerido": false
+        },
+        "reglas_hook": {
+          "tipo": "string",
+          "descripcion": "Instrucciones específicas para el gancho de apertura.",
+          "requerido": false
+        },
+        "reglas_cta": {
+          "tipo": "string",
+          "descripcion": "Cómo debe hacer el llamado a la acción sin romper el personaje.",
+          "requerido": false
+        },
+        "metricas_exito": {
+          "tipo": "array",
+          "items": "string",
+          "descripcion": "Indicadores que validan que el guion funcionó.",
+          "requerido": false
+        },
+        "ejemplos_guiones_referencia": {
+          "tipo": "array",
+          "items": {
+            "tipo": "object",
+            "campos": {
+              "tema": { "tipo": "string" },
+              "formato": { "tipo": "string" },
+              "hook": { "tipo": "string" },
+              "desarrollo": { "tipo": "string" },
+              "punchline": { "tipo": "string" },
+              "cta": { "tipo": "string" },
+              "notas": { "tipo": "string" }
+            }
+          },
+          "descripcion": "Ejemplos reales validados. Son la referencia de calibración más poderosa para la IA.",
+          "requerido": false
+        }
+      }
+    },
+
+    "bloque_12_reglas_maestras": {
+      "nivel": "basico",
+      "descripcion": "Instrucciones absolutas que no pueden violarse en ningún guion. Son el contrato de coherencia del personaje.",
+      "campos": {
+        "reglas_siempre": {
+          "tipo": "array",
+          "items": "string",
+          "descripcion": "Lo que SIEMPRE debe estar presente.",
+          "requerido": true
+        },
+        "reglas_nunca": {
+          "tipo": "array",
+          "items": "string",
+          "descripcion": "Lo que NUNCA puede ocurrir.",
+          "requerido": true
+        },
+        "instruccion_maestra": {
+          "tipo": "string",
+          "descripcion": "Una frase síntesis que captura la esencia del personaje para la IA. Es lo último que se lee antes de generar.",
+          "requerido": true
+        }
+      }
+    },
+
+    "bloque_13_psicologia_profunda": {
+      "nivel": "avanzado",
+      "descripcion": "Dimensión psicológica extendida. Para personajes protagonistas o de alta complejidad narrativa.",
+      "campos": {
+        "herida_de_origen": {
+          "tipo": "string",
+          "descripcion": "El evento formativo que explica todo lo demás. La IA lo usa para escribir al personaje en sus peores momentos.",
+          "requerido": false
+        },
+        "momento_mayor_orgullo": {
+          "tipo": "string",
+          "descripcion": "Define sus valores reales, no sus valores declarados.",
+          "requerido": false
+        },
+        "vergüenza_enterrada": {
+          "tipo": "string",
+          "descripcion": "Lo que nunca mencionaría voluntariamente. Genera subtexto en cada escena.",
+          "requerido": false
+        },
+        "sesgo_cognitivo_dominante": {
+          "tipo": "enum",
+          "valores": [
+            "Sesgo de confirmación",
+            "Pensamiento en blanco y negro",
+            "Catastrofismo",
+            "Personalización",
+            "Lectura de mente",
+            "Maximización del error",
+            "Razonamiento emocional",
+            "Deberismo",
+            "Etiquetado"
+          ],
+          "requerido": false
+        },
+        "inteligencia_dominante": {
+          "tipo": "enum",
+          "valores": [
+            "Lingüística", "Lógico-matemática", "Espacial",
+            "Corporal-cinestésica", "Musical", "Interpersonal",
+            "Intrapersonal", "Naturalista", "Existencial"
+          ],
+          "descripcion": "Basado en la Teoría de Inteligencias Múltiples de Gardner.",
+          "requerido": false
+        },
+        "inteligencia_reprimida": {
+          "tipo": "enum",
+          "valores": [
+            "Lingüística", "Lógico-matemática", "Espacial",
+            "Corporal-cinestésica", "Musical", "Interpersonal",
+            "Intrapersonal", "Naturalista", "Existencial"
+          ],
+          "descripcion": "La que tiene pero no usa o no reconoce. Genera momentos de quiebre dramático cuando emerge.",
+          "requerido": false
+        },
+        "estilo_resolucion_problemas": {
+          "tipo": "enum",
+          "valores": ["Intuitivo", "Sistemático", "Impulsivo", "Colaborativo", "Evasivo"],
+          "requerido": false
+        },
+        "contexto_socioeconomico_origen": {
+          "tipo": "enum",
+          "valores": [
+            "Marginalidad extrema", "Clase baja", "Clase media baja",
+            "Clase media", "Clase media alta", "Clase alta", "Élite"
+          ],
+          "descripcion": "Define la relación del personaje con el dinero, la autoridad y el esfuerzo.",
+          "requerido": false
+        }
+      }
+    },
+
+    "bloque_14_relaciones": {
+      "nivel": "avanzado",
+      "descripcion": "Cómo el personaje se vincula con otros. Crítico para guiones con múltiples personajes.",
+      "campos": {
+        "patron_de_apego": {
+          "tipo": "enum",
+          "valores": ["Seguro", "Ansioso", "Evitativo", "Desorganizado"],
+          "descripcion": "Define cómo reacciona cuando un vínculo está en riesgo.",
+          "requerido": false
+        },
+        "rol_en_grupos": {
+          "tipo": "enum",
+          "valores": [
+            "Líder natural", "Opositor", "Mediador",
+            "Satélite", "Disruptor", "Observador", "Catalizador"
+          ],
+          "requerido": false
+        },
+        "vinculo_que_busca": {
+          "tipo": "string",
+          "descripcion": "¿Admiración? ¿Lealtad? ¿Dependencia? ¿Distancia segura?",
+          "requerido": false
+        },
+        "vinculo_que_sabotea": {
+          "tipo": "string",
+          "descripcion": "Lo que destruye sin querer en sus relaciones.",
+          "requerido": false
+        },
+        "figura_autoridad_interna": {
+          "tipo": "string",
+          "descripcion": "¿A quién le habla mentalmente cuando toma decisiones difíciles?",
+          "requerido": false
+        },
+        "relaciones_definidas": {
+          "tipo": "array",
+          "items": {
+            "tipo": "object",
+            "campos": {
+              "nombre_personaje": { "tipo": "string" },
+              "id_personaje": { "tipo": "string", "descripcion": "Referencia al id de otro personaje en el sistema." },
+              "tipo_vinculo": { "tipo": "string" },
+              "dinamica": { "tipo": "string" },
+              "tension_latente": { "tipo": "string" }
+            }
+          },
+          "descripcion": "Vínculos específicos con otros personajes del universo.",
+          "requerido": false
+        }
+      }
+    },
+
+    "bloque_15_arco_evolutivo": {
+      "nivel": "avanzado",
+      "descripcion": "La trayectoria del personaje a lo largo del tiempo. Imprescindible si el proyecto tiene continuidad narrativa.",
+      "campos": {
+        "estado_inicial": {
+          "tipo": "string",
+          "descripcion": "Quién es el personaje al comenzar la historia o el proyecto.",
+          "requerido": false
+        },
+        "estado_final_deseado": {
+          "tipo": "string",
+          "descripcion": "Quién podría llegar a ser si todo sale bien.",
+          "requerido": false
+        },
+        "tipo_arco": {
+          "tipo": "enum",
+          "valores": [
+            "Transformación positiva",
+            "Caída trágica",
+            "Arco plano (inamovible)",
+            "Arco cíclico (repite patrones)",
+            "Arco fragmentado (evolución no lineal)"
+          ],
+          "requerido": false
+        },
+        "resistencia_al_cambio": {
+          "tipo": "string",
+          "descripcion": "¿Qué parte de sí mismo se niega a soltar?",
+          "requerido": false
+        },
+        "catalizador_necesario": {
+          "tipo": "string",
+          "descripcion": "¿Qué tipo de evento o persona podría moverlo?",
+          "requerido": false
+        },
+        "hitos_narrativos": {
+          "tipo": "array",
+          "items": {
+            "tipo": "object",
+            "campos": {
+              "hito": { "tipo": "string" },
+              "impacto_en_personaje": { "tipo": "string" },
+              "estado_post_hito": { "tipo": "string" }
+            }
+          },
+          "descripcion": "Momentos clave que modifican al personaje de forma permanente.",
+          "requerido": false
+        }
+      }
+    }
+  },
+
+  "notas_implementacion": {
+    "orden_de_procesamiento_prompt": [
+      "bloque_0_metadata (solo nivel_dificultad_ia)",
+      "bloque_1_identidad",
+      "bloque_2_nucleo_psicologico",
+      "bloque_3_psicometria",
+      "bloque_4_voz_y_lenguaje",
+      "bloque_5_dialecto",
+      "bloque_6_humor",
+      "bloque_7_dimension_humana",
+      "bloque_12_reglas_maestras",
+      "bloque_11_formato_contenido (solo estructura y ejemplos)",
+      "bloque_13_psicologia_profunda (si nivel avanzado)",
+      "bloque_14_relaciones (si nivel avanzado y hay otros personajes)",
+      "bloque_15_arco_evolutivo (si nivel avanzado)"
+    ],
+    "bloques_exclusivos_produccion_visual": [
+      "bloque_8_apariencia",
+      "bloque_9_gesticulacion",
+      "bloque_10_produccion"
+    ],
+    "principio_rector": "Este schema define quién ES el personaje, no solo cómo suena. Todo lo que la IA genera debe ser coherente con el núcleo psicológico, incluso cuando el personaje no habla. El silencio, las pausas y lo que evita decir deben reflejar su creencia nuclear y su mecanismo de defensa."
+  }
+}
