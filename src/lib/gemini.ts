@@ -242,24 +242,176 @@ const threadPackSchema = {
 // ============================================================
 
 function buildBaseSystemPrompt(c: CharacterProfile): string {
-  return `Eres el director creativo y guionista de "${c.name}", ${c.occupation}.
+  const fullProfile = c.full_profile || {};
+  const name = c.name || 'Personaje';
+  const occupation = c.occupation || 'creador de contenido';
+  const voiceTone = c.voice_tone || 'neutral';
+  const catchphrases = c.catchphrases || [];
+  const avoidWords = c.avoid_words || [];
+  const wpm = c.wpm || 150;
+  const loraTrigger = c.lora_trigger || '';
+  const styleWords = c.style_words || '';
+  const cameraTemplates = c.camera_templates || '';
+  const notes = c.notes || '';
+
+  const psicometria = fullProfile.psicometria || {};
+  const ejes = psicometria.ejes_temperamentales || {};
+  const traits = psicometria.traits_expresivos || {};
+  const nucleo = fullProfile.nucleo_psicologico || {};
+  const reglas = fullProfile.reglas_maestras || {};
+  const rulesAlways = reglas.reglas_siempre || [];
+  const rulesNever = reglas.reglas_nunca || [];
+  const dimensionHumana = fullProfile.dimension_humana || {};
+
+  const hasRichProfile = !!(
+    nucleo.arquetipo_primario ||
+    Object.keys(ejes).length > 0 ||
+    Object.keys(traits).length > 0 ||
+    rulesAlways.length > 0 ||
+    rulesNever.length > 0
+  );
+
+  let systemPrompt = `Eres el director creativo y guionista de "${name}", ${occupation}.
 
 FICHA RESUMIDA DEL PERSONAJE:
-- Tono de voz: ${c.voice_tone}
-- Latiguillos típicos: ${c.catchphrases?.length ? c.catchphrases.join(" | ") : "(ninguno definido)"}
-- Evitar: ${c.avoid_words?.length ? c.avoid_words.join(", ") : "(ninguno)"}
-- Instrucciones Maestras: ${c.notes || "(ninguna)"}
+- Tono de voz: ${voiceTone}
+- Latiguillos típicos: ${catchphrases.length ? catchphrases.join(' | ') : '(ninguno definido)'}
+- Evitar: ${avoidWords.length ? avoidWords.join(', ') : '(ninguno)'}
+- Velocidad de habla: ${wpm} palabras por minuto
 
+`;
+
+  if (hasRichProfile) {
+    if (nucleo.arquetipo_primario) {
+      systemPrompt += `
+NÚCLEO PSICOLÓGICO:
+- Arquetipo primario: ${nucleo.arquetipo_primario}
+`;
+      if (nucleo.arquetipo_en_tension) {
+        systemPrompt += `- Arquetipo en tensión: ${nucleo.arquetipo_en_tension}\n`;
+      }
+      if (nucleo.sombra_junguiana) {
+        systemPrompt += `- Sombra junguiana: ${nucleo.sombra_junguiana}\n`;
+      }
+      if (nucleo.creencia_nuclear) {
+        systemPrompt += `- Creencia nuclear: "${nucleo.creencia_nuclear}"\n`;
+      }
+      if (nucleo.motivacion_visible) {
+        systemPrompt += `- Motivación visible: ${nucleo.motivacion_visible}\n`;
+      }
+      if (nucleo.motivacion_real) {
+        systemPrompt += `- Motivación REAL (subtexto): ${nucleo.motivacion_real}\n`;
+      }
+      if (nucleo.contradiccion_central) {
+        systemPrompt += `- Contradicción central: ${nucleo.contradiccion_central}\n`;
+      }
+      if (nucleo.mecanismo_defensa_dominante) {
+        systemPrompt += `- Mecanismo de defensa dominante: ${nucleo.mecanismo_defensa_dominante}\n`;
+      }
+      if (nucleo.detonante_de_quiebre) {
+        systemPrompt += `- Detonante de quiebre: ${nucleo.detonante_de_quiebre}\n`;
+      }
+    }
+
+    const hasPsicometria = ejes.proactividad !== undefined || traits.carisma !== undefined;
+    if (hasPsicometria) {
+      systemPrompt += `
+PSICOMETRÍA (0-100):
+
+EJES TEMPERAMENTALES:
+- Proactividad: ${ejes.proactividad ?? 'N/A'} (0=pasivo, 100=proactivo)
+- Analiticidad: ${ejes.analiticidad ?? 'N/A'} (0=impulsivo, 100=analítico)
+- Sociabilidad: ${ejes.sociabilidad ?? 'N/A'} (0=introvertido, 100=extravertido)
+- Hostilidad: ${ejes.hostilidad ?? 'N/A'} (0=abierto/amistoso, 100=hostil/desafiante)
+- Estabilidad emocional: ${ejes.estabilidad_emocional ?? 'N/A'} (0=volátil, 100=estoico)
+- Brújula moral: ${ejes.brujula_moral ?? 'N/A'} (0=caótico, 100=honorable/principista)
+
+TRAITS EXPRESIVOS:
+- Carisma: ${traits.carisma ?? 'N/A'}
+- Inteligencia percibida: ${traits.inteligencia_percibida ?? 'N/A'}
+- Sensualidad: ${traits.sensualidad ?? 'N/A'}
+- Irreverencia: ${traits.irreverencia ?? 'N/A'}
+- Elegancia: ${traits.elegancia ?? 'N/A'}
+- Intensidad de humor: ${traits.intensidad_humor ?? 'N/A'}
+- Confianza: ${traits.confianza ?? 'N/A'}
+- Empatía: ${traits.empatia ?? 'N/A'}
+- Agresividad verbal: ${traits.agresividad_verbal ?? 'N/A'}
+- Autenticidad: ${traits.autenticidad ?? 'N/A'}
+- Vulgaridad controlada: ${traits.vulgaridad_controlada ?? 'N/A'}
+- Dramaturgia temporal: ${traits.dramaturgia_temporal ?? 'N/A'}
+- Cercanía dialectal: ${traits.cercania_dialectal ?? 'N/A'}
+
+USA ESTOS VALORES para modular la personalidad en el contenido generado.
+`;
+    }
+
+    if (rulesAlways.length > 0 || rulesNever.length > 0) {
+      systemPrompt += `
+REGLAS ABSOLUTAS:
+
+`;
+      if (rulesAlways.length > 0) {
+        systemPrompt += `SIEMPRE DEBE:
+${rulesAlways.map(rule => `- ${rule}`).join('\n')}
+
+`;
+      }
+      if (rulesNever.length > 0) {
+        systemPrompt += `NUNCA DEBE:
+${rulesNever.map(rule => `- ${rule}`).join('\n')}
+
+`;
+      }
+    }
+
+    if (dimensionHumana.vicio_defecto || dimensionHumana.miedo_trauma) {
+      systemPrompt += `
+DIMENSIÓN HUMANA (toques de humanidad):
+`;
+      if (dimensionHumana.vicio_defecto) {
+        systemPrompt += `- Vicio/Defecto: ${dimensionHumana.vicio_defecto}\n`;
+      }
+      if (dimensionHumana.miedo_trauma) {
+        systemPrompt += `- Miedo/Trauma: ${dimensionHumana.miedo_trauma}\n`;
+      }
+      if (dimensionHumana.peculiaridad_tic) {
+        systemPrompt += `- Peculiaridad/Tic: ${dimensionHumana.peculiaridad_tic}\n`;
+      }
+      if (dimensionHumana.objeto_talisman) {
+        systemPrompt += `- Objeto talismán: ${dimensionHumana.objeto_talisman}\n`;
+      }
+    }
+
+    if (reglas.instruccion_maestra) {
+      systemPrompt += `
+INSTRUCCIÓN MAESTRA:
+${reglas.instruccion_maestra}
+
+`;
+    }
+  } else if (notes) {
+    systemPrompt += `
+INSTRUCCIONES MAESTRAS (Fallback - personaje sin perfil psicométrico completo):
+${notes}
+
+`;
+  }
+
+  systemPrompt += `
 CONFIG DE PRODUCCIÓN VISUAL:
-- Trigger word del LoRA: "${c.lora_trigger}" (DEBE aparecer al inicio del cover_image_prompt)
-- Estilo visual: ${c.style_words}
-- Cámara: ${c.camera_templates}
+- Trigger word del LoRA: "${loraTrigger}"
+- Estilo visual: ${styleWords}
+- Cámara: ${cameraTemplates}
 
 REGLAS DE ORO:
 1. El personaje habla en ESPAÑOL.
 2. La voz, dialecto y personalidad deben ser CONSISTENTES en TODO el contenido.
-3. Idioma: Todo el guion, captions y diálogos van en ESPAÑOL.
-   Los prompts para la IA de video o imagen van en INGLÉS.`;
+3. Usa la PSICOMETRÍA y el NÚCLEO PSICOLÓGICO para modular tono, elecciones de palabras, y decisiones narrativas.
+4. Idioma: Todo el guion, captions y diálogos van en ESPAÑOL.
+   Los prompts para la IA de video o imagen van en INGLÉS.
+`;
+
+  return systemPrompt;
 }
 
 function buildVideoSystemPrompt(c: CharacterProfile, rawWpm: number): string {
@@ -447,10 +599,44 @@ function isThreadParams(p: GenerateParams): p is ThreadParams {
   return p.platform === 'thread';
 }
 
+function calculateDynamicTemperature(intensity: number): number {
+  if (intensity <= 30) return 0.4;
+  if (intensity <= 60) return 0.7;
+  return 0.95;
+}
+
+function buildIntensityInstructions(intensity: number): string {
+  if (intensity <= 30) {
+    return `INTENSIDAD PSICOLÓGICA: ${intensity}/100 (BAJA / CONSERVADOR)
+
+- Mantente FIEL al personaje. No exageres.
+- La personalidad debe ser SUTIL y AUTÉNTICA.
+- No fuerces el humor ni los rasgos extremos.
+- Comunicación natural y creíble.`;
+  } else if (intensity <= 60) {
+    return `INTENSIDAD PSICOLÓGICA: ${intensity}/100 (MEDIA / BALANCEADA)
+
+- Balance entre fidelidad al personaje y expresividad.
+- Los rasgos psicométricos deben guiar las decisiones.
+- Humor y expresión acordes a la personalidad base.`;
+  } else {
+    return `INTENSIDAD PSICOLÓGICA: ${intensity}/100 (ALTA / EXAGERADA)
+
+- EXAGERA los rasgos del personaje.
+- Si la irreverencia es alta, sé más irreverente.
+- Si la hostilidad es alta, sé más desafiante.
+- Si el humor es alto, sé más gracioso.
+- Amplifica la voz, el dialecto, y las elecciones de palabras.
+- MANTÉN la COHERENCIA con el núcleo psicológico — solo amplifícalo.`;
+  }
+}
+
 export async function generateContentPack(params: GenerateParams): Promise<PackContent> {
   const ai = getAiClient();
   const { character, humor_intensity, hook_hint } = params;
   const rawWpm = character.wpm || 140;
+  const dynamicTemperature = calculateDynamicTemperature(humor_intensity);
+  const intensityInstructions = buildIntensityInstructions(humor_intensity);
 
   let systemPrompt: string;
   let userPrompt: string;
@@ -466,13 +652,15 @@ PLATAFORMA: ${params.platform.toUpperCase()}
 TEMA: ${params.topic}
 DURACIÓN TOTAL: ${script_duration}s
 DURACIÓN POR CLIP: ${clip_duration}s
-INTENSIDAD PSICOLÓGICA: ${humor_intensity}/100
-${hook_hint ? `GANCHO: ${hook_hint}` : ''}
+
+${intensityInstructions}
+${hook_hint ? `GANCHO ESPECÍFICO A INTEGRAR: ${hook_hint}` : ''}
 
 REGLAS:
 - Cada shot dura ~${clip_duration}s.
 - Máximo ${words_per_clip} palabras de diálogo por shot (lip-sync).
 - Incluye gestos y mayúsculas para énfasis.
+- Usa la PSICOMETRÍA y el NÚCLEO PSICOLÓGICO para cada elección.
 
 Genera el contenido completo.`;
     schema = videoPackSchema;
@@ -483,14 +671,16 @@ Genera el contenido completo.`;
 PLATAFORMA: CARRUSEL
 TEMA: ${params.topic}
 CANTIDAD DE SLIDES: ${params.slides_count}
-INTENSIDAD PSICOLÓGICA: ${humor_intensity}/100
-${hook_hint ? `GANCHO: ${hook_hint}` : ''}
+
+${intensityInstructions}
+${hook_hint ? `GANCHO ESPECÍFICO A INTEGRAR: ${hook_hint}` : ''}
 
 REGLAS:
 - Slide 1: Hook impactante.
 - Slides del medio: Desarrollo del tema.
 - Slide final: CTA.
 - TODOS los image_prompt deben incluir el LoRA trigger "${character.lora_trigger}" al inicio.
+- Usa la PSICOMETRÍA para el overlay_text y las decisiones narrativas.
 
 Genera el carrusel completo.`;
     schema = carouselPackSchema;
@@ -501,14 +691,16 @@ Genera el carrusel completo.`;
 PLATAFORMA: HILO (THREAD)
 TEMA: ${params.topic}
 CANTIDAD DE POSTS: ${params.posts_count}
-INTENSIDAD PSICOLÓGICA: ${humor_intensity}/100
-${hook_hint ? `GANCHO: ${hook_hint}` : ''}
+
+${intensityInstructions}
+${hook_hint ? `GANCHO ESPECÍFICO A INTEGRAR: ${hook_hint}` : ''}
 
 REGLAS:
-- Post 1 (Hook: máximo impacto.
+- Post 1 (Hook): máximo impacto.
 - Posts intermedios: desarrollo.
 - Post final (CTA): pregunta o llamado a la acción.
 - Tono conversacional, como si el personaje realmente escribe.
+- Cada post debe reflejar la PSICOMETRÍA y el NÚCLEO PSICOLÓGICO.
 
 Genera el hilo completo.`;
     schema = threadPackSchema;
@@ -523,7 +715,7 @@ Genera el hilo completo.`;
       systemInstruction: systemPrompt,
       responseMimeType: "application/json",
       responseSchema: schema,
-      temperature: 0.7,
+      temperature: dynamicTemperature,
       safetySettings,
     }
   });
