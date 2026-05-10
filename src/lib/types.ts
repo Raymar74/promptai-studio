@@ -1,4 +1,4 @@
-export type Platform = "reel" | "carousel" | "thread" | "video" | string;
+export type Platform = "video" | "reel" | "carousel" | "thread";
 
 export type CharacterVisibility = 'private' | 'public' | 'listed';
 export type CharacterLicense = 'personal' | 'free' | 'paid' | 'exclusive';
@@ -26,20 +26,14 @@ export interface CharacterProfile {
   voice_reference_url?: string | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   full_profile?: any | null;
-  // Commercial metadata
   creator_id?: string | null;
   visibility?: CharacterVisibility;
   license_type?: CharacterLicense;
   version?: string;
   pack_format_version?: string;
-  // Draft flag
   is_draft?: boolean;
 }
 
-/**
- * Portable export format for character trading/sharing.
- * Self-contained: includes all data needed to recreate the character.
- */
 export interface CharacterPackExport {
   pack_format_version: string;
   exported_at: string;
@@ -67,6 +61,10 @@ export interface CharacterPackExport {
   };
 }
 
+// ============================================================
+// TIPOS COMPARTIDOS
+// ============================================================
+
 export interface Shot {
   index: number;
   duration_seconds: number;
@@ -76,16 +74,82 @@ export interface Shot {
   prompt_sonido: string;
 }
 
-export interface PackContent {
+export interface VideoScript {
+  hook: string;
+  body: string;
+  punchline: string;
+  voiceover_full: string;
+}
+
+// ============================================================
+// PLATFORM: VIDEO / REEL (existente)
+// ============================================================
+
+export interface VideoPackContent {
+  platform: "video" | "reel";
   title: string;
   summary: string;
-  script: { hook: string; body: string; punchline: string; voiceover_full: string };
+  script: VideoScript;
   shots: Shot[];
   cover_image_prompt: string;
   cover_i2v_prompt: string;
   caption: string;
   hashtags: string[];
 }
+
+// ============================================================
+// PLATFORM: CAROUSEL (Carrusel de Instagram)
+// ============================================================
+
+export interface CarouselSlide {
+  index: number;
+  image_prompt: string;
+  overlay_text: string;
+  alt_text: string;
+}
+
+export interface CarouselPackContent {
+  platform: "carousel";
+  title: string;
+  summary: string;
+  slides: CarouselSlide[];
+  cover_image_prompt: string;
+  caption: string;
+  hashtags: string[];
+  first_comment?: string;
+}
+
+// ============================================================
+// PLATFORM: THREAD (Hilo de X / LinkedIn)
+// ============================================================
+
+export interface ThreadPost {
+  index: number;
+  content: string;
+  is_hook?: boolean;
+  is_cta?: boolean;
+  media_prompt?: string;
+}
+
+export interface ThreadPackContent {
+  platform: "thread";
+  title: string;
+  summary: string;
+  posts: ThreadPost[];
+  cover_image_prompt?: string;
+  caption: string;
+  hashtags: string[];
+}
+
+// ============================================================
+// UNION DISCRIMINADA (PackContent)
+// ============================================================
+
+export type PackContent = VideoPackContent | CarouselPackContent | ThreadPackContent;
+
+// ============================================================
+// ContentPack (en BD)
+// ============================================================
 
 export interface ContentPack {
   id: string;
@@ -102,4 +166,20 @@ export interface ContentPack {
   published_link: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// ============================================================
+// Type Guards
+// ============================================================
+
+export function isVideoContent(p: PackContent): p is VideoPackContent {
+  return p.platform === "video" || p.platform === "reel";
+}
+
+export function isCarouselContent(p: PackContent): p is CarouselPackContent {
+  return p.platform === "carousel";
+}
+
+export function isThreadContent(p: PackContent): p is ThreadPackContent {
+  return p.platform === "thread";
 }

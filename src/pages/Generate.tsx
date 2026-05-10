@@ -13,19 +13,48 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Sparkles, Loader2, UserCog } from "lucide-react";
+import { Sparkles, Loader2, UserCog, Film, Images, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { HelpTooltip } from "@/components/HelpTooltip";
 
-const schema = z.object({
+const videoSchema = z.object({
   topic: z.string().trim().min(3, "Cuéntame un poco más").max(500),
+  platform: z.enum(["video", "reel"]),
   script_duration: z.number().min(5, "El guion debe durar al menos 5s"),
   clip_duration: z.number().min(5, "El clip debe durar al menos 5s"),
   wpm_factor: z.number().min(0.5).max(1.0),
   humor_intensity: z.number().min(0).max(100),
   hook_hint: z.string().max(280).optional(),
 });
+
+const carouselSchema = z.object({
+  topic: z.string().trim().min(3, "Cuéntame un poco más").max(500),
+  platform: z.literal("carousel"),
+  slides_count: z.number().min(3).max(10),
+  humor_intensity: z.number().min(0).max(100),
+  hook_hint: z.string().max(280).optional(),
+});
+
+const threadSchema = z.object({
+  topic: z.string().trim().min(3, "Cuéntame un poco más").max(500),
+  platform: z.literal("thread"),
+  posts_count: z.number().min(3).max(15),
+  humor_intensity: z.number().min(0).max(100),
+  hook_hint: z.string().max(280).optional(),
+});
+
+const platformOptions: { value: Platform; label: string; icon: React.ReactNode; description: string }[] = [
+  { value: "video", label: "Video", icon: <Film className="w-4 h-4" />, description: "Video vertical con clips y prompts I2V" },
+  { value: "reel", label: "Reel", icon: <Film className="w-4 h-4" />, description: "Igual que Video (formato corto optimizado)" },
+  { value: "carousel", label: "Carrusel", icon: <Images className="w-4 h-4" />, description: "Carrusel de Instagram con imágenes y texto superpuesto" },
+  { value: "thread", label: "Hilo", icon: <MessageSquare className="w-4 h-4" />, description: "Hilo para X / Twitter o LinkedIn" },
+];
+
+function getPlatformConfig(p: Platform) {
+  return platformOptions.find(o => o.value === p) || platformOptions[0];
+}
 
 export default function GeneratePage() {
   const { user } = useAuth();
@@ -34,11 +63,20 @@ export default function GeneratePage() {
   const [characters, setCharacters] = useState<CharacterProfile[]>([]);
   const [character, setCharacter] = useState<CharacterProfile | null>(null);
   const [topic, setTopic] = useState(searchParams.get("topic") ?? "");
+  
+  const [platform, setPlatform] = useState<Platform>(
+    (searchParams.get("platform") as Platform) || "video"
+  );
+  
   const [scriptDurationStr, setScriptDurationStr] = useState(searchParams.get("script") ?? "30");
   const [customScriptDuration, setCustomScriptDuration] = useState("");
   const [clipDurationStr, setClipDurationStr] = useState(searchParams.get("clip") ?? "10");
   const [customClipDuration, setCustomClipDuration] = useState("");
   const [wpmFactor, setWpmFactor] = useState(0.8);
+  
+  const [slidesCount, setSlidesCount] = useState(5);
+  const [postsCount, setPostsCount] = useState(7);
+  
   const [humor, setHumor] = useState(
     searchParams.get("humor") ? Number(searchParams.get("humor")) : 60,
   );
@@ -46,6 +84,12 @@ export default function GeneratePage() {
   const isRetry = searchParams.get("retry") === "1";
   const [busy, setBusy] = useState(false);
   const userId = user?.id;
+
+  const isVideoPlatform = platform === "video" || platform === "reel";
+  const isCarouselPlatform = platform === "carousel";
+  const isThreadPlatform = platform === "thread";
+
+  const platformConfig = getPlatformConfig(platform);
 
   useEffect(() => {
     if (!userId) return;
@@ -62,35 +106,77 @@ export default function GeneratePage() {
         if (!searchParams.get("humor")) setHumor(initialChar.default_humor);
       })
       .catch((e) => toast.error(e.message));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
-
-
 
   const generate = async () => {
     if (!character || !user) return;
-    const script_duration = scriptDurationStr === "custom" ? Number(customScriptDuration) : Number(scriptDurationStr);
-    const clip_duration = clipDurationStr === "custom" ? Number(customClipDuration) : Number(clipDurationStr);
 
-    const parsed = schema.safeParse({ topic, script_duration, clip_duration, wpm_factor: wpmFactor, humor_intensity: humor, hook_hint: hookHint || undefined });
-    if (!parsed.success) {
-      toast.error(parsed.error.errors[0].message);
-      return;
+    let params: any;
+    let format: string;
+
+    if (isVideoPlatform) {
+      const script_duration = scriptDurationStr === "custom" ? Number(customScriptDuration) : Number(scriptDurationStr);
+      const clip_duration = clipDurationStr === "custom" ? Number(customClipDuration) : Number(clipDurationStr);
+      
+      const parsed = videoSchema.safeParse({
+        topic,
+        platform,
+        script_duration,
+        clip_duration,
+        wpm_factor: wpmFactor,
+        humor_intensity: humor,
+        hook_hint: hookHint || undefined,
+      });
+      if (!parsed.success) {
+        toast.error(parsed.error.errors[0].message);
+        return;
+      }
+      params = parsed.data;
+      format = `${script_duration}s / ${clip_duration}s`;
+    } else if (isCarouselPlatform) {
+      const parsed = carouselSchema.safeParse({
+        topic,
+        platform,
+        slides_count: slidesCount,
+        humor_intensity: humor,
+        hook_hint: hookHint || undefined,
+      });
+      if (!parsed.success) {
+        toast.error(parsed.error.errors[0].message);
+        return;
+      }
+      params = parsed.data;
+      format = `${slidesCount} slides`;
+    } else {
+      const parsed = threadSchema.safeParse({
+        topic,
+        platform,
+        posts_count: postsCount,
+        humor_intensity: humor,
+        hook_hint: hookHint || undefined,
+      });
+      if (!parsed.success) {
+        toast.error(parsed.error.errors[0].message);
+        return;
+      }
+      params = parsed.data;
+      format = `${postsCount} posts`;
     }
+
     setBusy(true);
     try {
-      const pack: PackContent = await generateContentPack({ ...parsed.data, character });
+      const pack: PackContent = await generateContentPack({ ...params, character });
 
       const { data: saved, error: e2 } = await supabase
         .from("content_packs")
         .insert({
           user_id: user.id,
           character_id: character.id,
-          topic: parsed.data.topic,
-          platform: "video",
-          format: `${parsed.data.script_duration}s / ${parsed.data.clip_duration}s`,
-          humor_intensity: parsed.data.humor_intensity,
-          hook_hint: parsed.data.hook_hint ?? null,
+          topic: params.topic,
+          platform: params.platform,
+          format,
+          humor_intensity: params.humor_intensity,
+          hook_hint: params.hook_hint ?? null,
           content: pack as any,
         })
         .select("id")
@@ -134,6 +220,7 @@ export default function GeneratePage() {
       </div>
 
       <Card className="p-6 md:p-8 space-y-8 animate-in slide-in-from-bottom-8 duration-700 delay-300 fill-mode-both border-primary/20 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+        
         <div className="space-y-3">
           <Label className="text-base">Selecciona un personaje</Label>
           <div className="flex flex-wrap gap-4">
@@ -166,6 +253,32 @@ export default function GeneratePage() {
         </div>
 
         <div className="space-y-3">
+          <Label className="text-base">Formato / Plataforma</Label>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {platformOptions.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setPlatform(opt.value)}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-2 p-4 rounded-lg border-2 transition-all text-center",
+                  platform === opt.value
+                    ? "border-primary bg-primary/10 shadow-[0_0_15px_hsl(var(--primary)/0.15)]"
+                    : "border-border hover:border-primary/40 hover:bg-background/50"
+                )}
+              >
+                {opt.icon}
+                <span className="text-sm font-medium">{opt.label}</span>
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            <Badge variant="outline" className="mr-2">{platformConfig.label}</Badge>
+            {platformConfig.description}
+          </p>
+        </div>
+
+        <div className="space-y-3">
           <Label htmlFor="topic" className="text-base">Tema o idea</Label>
           <Textarea
             id="topic"
@@ -178,60 +291,86 @@ export default function GeneratePage() {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-3">
-            <Label>Duración total del guion</Label>
-            <Select value={scriptDurationStr} onValueChange={setScriptDurationStr}>
-              <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="15">15 segundos</SelectItem>
-                <SelectItem value="30">30 segundos</SelectItem>
-                <SelectItem value="60">60 segundos</SelectItem>
-                <SelectItem value="custom">Personalizado</SelectItem>
-              </SelectContent>
-            </Select>
-            {scriptDurationStr === "custom" && (
-              <Input type="number" placeholder="Segundos" value={customScriptDuration} onChange={(e) => setCustomScriptDuration(e.target.value)} className="mt-2" />
-            )}
-          </div>
-          <div className="space-y-3">
-            <Label>Duración por clip</Label>
-            <Select value={clipDurationStr} onValueChange={setClipDurationStr}>
-              <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="5">5 segundos</SelectItem>
-                <SelectItem value="10">10 segundos</SelectItem>
-                <SelectItem value="15">15 segundos</SelectItem>
-                <SelectItem value="custom">Personalizado</SelectItem>
-              </SelectContent>
-            </Select>
-            {clipDurationStr === "custom" && (
-              <Input type="number" placeholder="Segundos" value={customClipDuration} onChange={(e) => setCustomClipDuration(e.target.value)} className="mt-2" />
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-4 pt-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Label>Factor de Seguridad WPM</Label>
-              <HelpTooltip content="Ajusta la densidad del guion. Un valor menor (0.7) genera menos palabras para clips lentos o con pausas. Un valor mayor (1.0) usa la capacidad máxima de habla del personaje." />
+        {isVideoPlatform && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <Label>Duración total del guion</Label>
+              <Select value={scriptDurationStr} onValueChange={setScriptDurationStr}>
+                <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="15">15 segundos</SelectItem>
+                  <SelectItem value="30">30 segundos</SelectItem>
+                  <SelectItem value="60">60 segundos</SelectItem>
+                  <SelectItem value="custom">Personalizado</SelectItem>
+                </SelectContent>
+              </Select>
+              {scriptDurationStr === "custom" && (
+                <Input type="number" placeholder="Segundos" value={customScriptDuration} onChange={(e) => setCustomScriptDuration(e.target.value)} className="mt-2" />
+              )}
             </div>
-            <span className="text-sm font-medium text-primary">{wpmFactor}</span>
+            <div className="space-y-3">
+              <Label>Duración por clip</Label>
+              <Select value={clipDurationStr} onValueChange={setClipDurationStr}>
+                <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5 segundos</SelectItem>
+                  <SelectItem value="10">10 segundos</SelectItem>
+                  <SelectItem value="15">15 segundos</SelectItem>
+                  <SelectItem value="custom">Personalizado</SelectItem>
+                </SelectContent>
+              </Select>
+              {clipDurationStr === "custom" && (
+                <Input type="number" placeholder="Segundos" value={customClipDuration} onChange={(e) => setCustomClipDuration(e.target.value)} className="mt-2" />
+              )}
+            </div>
           </div>
-          <Slider value={[wpmFactor]} min={0.5} max={1.0} step={0.1} onValueChange={(v) => setWpmFactor(v[0])} className="py-2" />
-          <p className="text-xs text-muted-foreground">Ajusta la cantidad de palabras por clip según tu velocidad de lectura (menor = menos palabras, más pausas).</p>
-        </div>
+        )}
+
+        {isCarouselPlatform && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label>Cantidad de slides</Label>
+              <span className="text-sm font-medium text-primary">{slidesCount}</span>
+            </div>
+            <Slider value={[slidesCount]} min={3} max={10} step={1} onValueChange={(v) => setSlidesCount(v[0])} className="py-2" />
+            <p className="text-xs text-muted-foreground">Entre 3 y 10 slides por carrusel. Cada slide tendrá prompt de imagen + texto superpuesto.</p>
+          </div>
+        )}
+
+        {isThreadPlatform && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label>Cantidad de posts</Label>
+              <span className="text-sm font-medium text-primary">{postsCount}</span>
+            </div>
+            <Slider value={[postsCount]} min={3} max={15} step={1} onValueChange={(v) => setPostsCount(v[0])} className="py-2" />
+            <p className="text-xs text-muted-foreground">Entre 3 y 15 posts por hilo. Incluye hook, desarrollo y CTA final.</p>
+          </div>
+        )}
+
+        {isVideoPlatform && (
+          <div className="space-y-4 pt-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Label>Factor de Seguridad WPM</Label>
+                <HelpTooltip content="Ajusta la densidad del guion. Un valor menor (0.7) genera menos palabras para clips lentos o con pausas. Un valor mayor (1.0) usa la capacidad máxima de habla del personaje." />
+              </div>
+              <span className="text-sm font-medium text-primary">{wpmFactor}</span>
+            </div>
+            <Slider value={[wpmFactor]} min={0.5} max={1.0} step={0.1} onValueChange={(v) => setWpmFactor(v[0])} className="py-2" />
+            <p className="text-xs text-muted-foreground">Ajusta la cantidad de palabras por clip según tu velocidad de lectura (menor = menos palabras, más pausas).</p>
+          </div>
+        )}
 
         <div className="space-y-4 pt-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Label>Intensidad de Rasgos Psicológicos</Label>
-              <HelpTooltip content="Define qué tanto se verán reflejados los arquetipos, traumas y vicios del personaje en el guion. 'Humor negro' forzará un tono más ácido si el personaje lo permite." />
+              <HelpTooltip content="Define qué tanto se verán reflejados los arquetipos, traumas y vicios del personaje en el guion." />
             </div>
             <span className="text-sm font-medium text-primary">{humor} · {humorLabel}</span>
           </div>
-          <Slider value={[humor]} min={0} max={100} step={5} onValueChange={(v) => setHumor(v[0])} className="py-2" />
+          <Slider value={[humor]} min={0} max={100} step={5} onValueChange={(v) => setHumor(v[0])} />
         </div>
 
         <div className="space-y-3">
@@ -249,7 +388,7 @@ export default function GeneratePage() {
         <div className="chalk-divider my-6 opacity-50" />
 
         <Button className="w-full h-14 text-lg font-medium tracking-wide shadow-[0_0_15px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_25px_hsl(var(--primary)/0.4)]" onClick={generate} disabled={busy || !character}>
-          {busy ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Generando la magia…</> : <><Sparkles className="h-5 w-5 mr-2" /> Generar paquete de contenido</>}
+          {busy ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Generando la magia…</> : <><Sparkles className="h-5 w-5 mr-2" /> Generar paquete de {platformConfig.label}</>}
         </Button>
       </Card>
     </div>
