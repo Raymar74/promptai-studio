@@ -57,6 +57,12 @@ El proyecto está en **producción activa** en Vercel. Las funcionalidades core 
 ### Prioridad alta
 - [x] **Soporte multi-plataforma en el generador:** Genera paquetes para Reel/Video, Carrusel de Instagram, e Hilo de Twitter/X.
 - [x] **Guardar borrador en Character Forge:** Guarda perfiles incompletos como borradores en Supabase (columna `is_draft`).
+- [x] **FASE 1 — `buildBaseSystemPrompt()` lee `full_profile` JSONB:** Ahora el motor de IA usa TODOS los bloques del schema:
+  - ✅ `nucleo_psicologico` (arquetipos, sombra, contradicción central)
+  - ✅ `psicometria` (19 valores numéricos 0–100)
+  - ✅ `reglas_maestras` como directivas estructuradas
+  - ✅ `dimension_humana` (vicios, miedos, tics)
+  - ✅ Temperatura DINÁMICA según slider de intensidad
 - [ ] **Verificación del sistema de Feedback:** Confirmar que el endpoint de Formspree esté activo y recibiendo mensajes en producción.
 
 ### Prioridad media
@@ -76,11 +82,42 @@ El proyecto está en **producción activa** en Vercel. Las funcionalidades core 
 ## Detalles técnicos actuales
 
 - **Frontend**: React 18 + TypeScript + Vite 5.
-- **UI**: TailwindCSS 3 + Shadcn/UI (Radix). Estética glassmorphism oscura con acento ámbar/cobre.
-- **BD**: Supabase PostgreSQL. Tablas: `character_profiles`, `content_packs`. Storage: bucket `character-refs`.
+- **UI**: TailwindCSS 3 + Shadcn/UI (Radix). Estética glassmorphism oscuro con acento ámbar/cobre.
+- **BD**: Supabase PostgreSQL. Tablas: `character_profiles`, `content_packs`, `feedback`, `character_history`.
+- **Storage**: Buckets `character-refs` (imágenes) y `character-voices` (audios).
 - **IA**: `@google/genai` v2 · `gemini-2.5-flash`. Corre 100% en el cliente (sin Edge Functions).
-- **Deploy**: Vercel con rewrite SPA.
+- **Temperatura IA**: Dinámica según "Intensidad de Rasgos Psicológicos":
+  - 0–30 → `0.4` (conservador)
+  - 40–60 → `0.7` (balance)
+  - 70–100 → `0.95` (exagerado)
+- **Deploy**: Vercel con rewrite SPA. Repo: `Raymar74/promptai-studio`.
 - **Feedback**: Formspree `mjglpwow`.
+
+---
+
+## Lecciones Aprendidas (FASE 1)
+
+### Problema 1: `full_profile` JSONB no se usaba
+- **Síntoma**: El Character Forge captura 12 bloques de datos psicológicos, pero `buildBaseSystemPrompt()` solo leía ~10% de la información (campos planos + `notes` como texto plano).
+- **Causa**: El campo `full_profile` existía en la BD pero nadie lo leía.
+- **Solución**: Refactorizar `buildBaseSystemPrompt()` para extraer y usar TODOS los bloques del `full_profile` JSONB.
+
+### Problema 2: Índice `[0]` vs `[1]` en Storage Policies
+- **Síntoma**: El bucket `character-voices` fallaba con "row-level security policy" mientras que `character-refs` funcionaba.
+- **Causa**: `storage.foldername(name)` devuelve un array donde el `user_id` está en el índice `[1]`, no `[0]`. El bucket `character-refs` usaba `[1]` (correcto), pero `character-voices` usaba `[0]` (incorrecto).
+- **Solución**: Cambiar todas las policies de `character-voices` para usar el índice `[1]`.
+
+### Problema 3: Slider "Intensidad Psicológica" no hacía nada
+- **Síntoma**: El slider aparecía en la UI y se guardaba en `humor_intensity`, pero no modificaba NINGÚN parámetro real.
+- **Solución**: 
+  1. Ahora el valor se inyecta en el user prompt con instrucciones explícitas.
+  2. Ahora modifica la **temperatura** de Gemini dinámicamente.
+
+### El Diferencial: Psicometría Numérica
+Lo que hace único a PromptAI Studio es que **no solo describe la personalidad con texto** (arquetipos, sombra, contradicción), sino que **cuantifica la personalidad con 19 valores numéricos** (6 ejes temperamentales + 13 traits expresivos) en escala 0–100.
+
+**ANTES**: Esta psicometría se guardaba pero NUNCA se usaba.
+**AHORA**: Llega directamente al system prompt como datos estructurados, y Gemini puede interpolar estos valores en cualquier situación.
 
 ---
 

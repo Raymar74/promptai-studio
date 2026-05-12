@@ -44,7 +44,9 @@ VITE_GEMINI_API_KEY="AIzaSy..."   # Fallback — el usuario puede sobreescribirl
 ### 3. Base de datos
 Ejecuta el script `docs/db/setup_database.sql` en el SQL Editor de Supabase. Esto crea:
 - Tablas `character_profiles` y `content_packs` con RLS.
-- Storage bucket `character-refs` (público) para imágenes de referencia de personajes.
+- Storage buckets:
+  - `character-refs` (público): imágenes de referencia de personajes.
+  - `character-voices` (público): audios de referencia de voz.
 - Triggers `touch_updated_at` en ambas tablas.
 
 ### 4. Levantar entorno de desarrollo
@@ -212,7 +214,7 @@ Envía feedback de usuarios (ideas, bugs, comentarios) a Formspree. Solo visible
 | `notes` | TEXT | Perfil psicológico avanzado (texto serializado) |
 | `reference_image_url` | TEXT | URL pública en Supabase Storage |
 | `reference_image_description` | TEXT | Descripción generada por IA de la imagen |
-| `full_profile` | JSONB | Perfil completo `CharacterProfileSchema` (reservado) |
+| `full_profile` | JSONB | Perfil completo `CharacterProfileSchema` v2.5 (12 bloques). **AHORA USADO ACTIVAMENTE** por `buildBaseSystemPrompt()`. |
 | `created_at` | TIMESTAMPTZ | |
 | `updated_at` | TIMESTAMPTZ | Auto-actualizado por trigger |
 
@@ -235,7 +237,10 @@ Envía feedback de usuarios (ideas, bugs, comentarios) a Formspree. Solo visible
 | `updated_at` | TIMESTAMPTZ | Auto-actualizado por trigger |
 
 ### Storage
-- **Bucket `character-refs`** (público): Almacena imágenes de referencia. Estructura de carpetas: `{user_id}/{filename}`.
+| Bucket | Descripción | Estructura |
+|---|---|---|
+| `character-refs` (público) | Imágenes de referencia de personajes | `{user_id}/{filename}` |
+| `character-voices` (público) | Audios de referencia de voz | `{user_id}/{filename}` |
 
 ---
 
@@ -251,8 +256,33 @@ El cliente se inicializa en cada llamada con `getAiClient()`, que prioriza la cl
 ### `generateContentPack(params)`
 - **Modelo:** `gemini-2.5-flash`
 - **Salida:** JSON estructurado con schema `packSchema` (título, resumen, guion 3 partes, array de shots I2V con 4 bloques, cover prompts, caption, hashtags).
-- **Temperatura:** 0.7
-- **Lógica de WPM:** `words_per_clip = round((wpm / 60) × wpm_factor × clip_duration)`. Se inyecta en el prompt de usuario para que el modelo no supere el límite de palabras por clip.
+- **Temperatura:** **DINÁMICA** según "Intensidad de Rasgos Psicológicos":
+  - 0–30 → `0.4` (conservador, fiel al personaje)
+  - 40–60 → `0.7` (balance, default)
+  - 70–100 → `0.95` (exagerado, creativo)
+- **Lógica de WPM:** `words_per_clip = round((wpm / 60) × wpm_factor × clip_duration)`.
+
+### `buildBaseSystemPrompt(character)` — **FASE 1 COMPLETADA**
+Esta función construye el system prompt que Gemini recibe. **Antes** solo usaba campos planos y `notes` como texto plano. **Ahora** lee y usa el `full_profile` JSONB completo:
+
+| Bloque | ¿Se usa? | Descripción |
+|---|:---:|---|
+| `nucleo_psicologico` | ✅ | Arquetipos, sombra junguiana, creencia nuclear, motivación real, contradicción central, mecanismo de defensa |
+| `psicometria` | ✅ | 6 ejes temperamentales + 13 traits expresivos (valores 0–100) |
+| `reglas_maestras` | ✅ | `reglas_siempre` y `reglas_nunca` como directivas estructuradas (no texto plano) |
+| `dimension_humana` | ✅ | Vicio/defecto, miedo/trauma, tic/peculiaridad |
+| `voz_y_lenguaje` | ✅ | Tono, registro, cadencia, latiguillos |
+| `dialecto` | ✅ | Tipo, intensidad, marcadores |
+| `humor` | ✅ | Intensidad, tipos activos |
+
+**El diferencial:** La psicometría numérica (TU "secreto") ahora llega directamente a Gemini como datos estructurados, no como texto plano.
+
+### Flujo de datos ANTES vs AHORA
+
+| Fase | ¿Qué pasaba? |
+|---|---|
+| **ANTES** | `full_profile` JSONB guardado pero NUNCA leído. Solo se usaban ~10% de los campos. |
+| **AHORA (FASE 1)** | `full_profile` leído y usado activamente. ~90% de la información psicológica llega a Gemini. |
 
 ### Estructura de 4 bloques I2V (por cada shot)
 | Campo | Idioma | Descripción |
