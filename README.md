@@ -17,6 +17,7 @@
 | **Base de Datos** | Supabase (PostgreSQL) con Row Level Security |
 | **Autenticación** | Supabase Auth (email/password) |
 | **Motor de IA** | Google Gemini SDK `@google/genai` v2 · modelo `gemini-2.5-flash` |
+| **Previsualización de Video** | Hyperframes `@hyperframes/player` (Web Component) |
 | **Formularios** | React Hook Form + Zod |
 | **Feedback** | Formspree (`https://formspree.io/f/mjglpwow`) |
 | **Deploy** | Vercel |
@@ -169,7 +170,10 @@ La generación llama a `generateContentPack()` → Gemini → guarda en `content
 ### 4. Paquete de Contenido (PackDetail)
 **Ruta:** `/pack/:id` → `PackDetail.tsx`
 
-Vista de resultados con pestañas:
+Vista de resultados con pestañas. **"Preview" es la pestaña por defecto** para Reels y Carruseles:
+- **Preview (NUEVO):** `<HyperframesPreview>` - reproducción HTML animado con controles (play/pause/restart)
+  - **Reel:** 1080x1920 vertical
+  - **Carrusel:** 1080x1080 cuadrado con transiciones entre slides
 - **Guion:** hook, desarrollo, punchline + voiceover completo.
 - **Shots I2V:** para cada clip, los 4 bloques de prompt: `[Sujeto]`, `[VISUAL]`, `[DIÁLOGO]`, `[SONIDO]`.
 - **Producción:** `cover_image_prompt` (con trigger LoRA), `cover_i2v_prompt`, caption y hashtags.
@@ -356,9 +360,20 @@ Variables de entorno requeridas en Vercel:
 - ✅ **Guardar borrador**: Guarda perfiles de personaje incompletos como borradores en Supabase.
 - ✅ **Character Forge**: Genera perfiles completos de personajes usando IA.
 - ✅ **Content Forge**: Genera guiones y prompts de contenido para personajes.
+- ✅ **PREVIEW HYPERFRAMES (NUEVO)**: Genera previsualizaciones instantáneas de Reels y Carruseles como HTML animado reproducible en el navegador.
+  - Gemini genera el `preview_html` junto con los prompts tradicionales
+  - `<HyperframesPreview>` reproduce el HTML con animaciones GSAP
+  - No requiere servidor ni render externo para preview
 
 ## Lo que la App NO hace
 
-- ❌ No genera imágenes ni videos finales — entrega prompts para usar en ComfyUI, LTX, Runway, Luma, etc.
+- ❌ **NO genera videos MP4 finales** — entrega:
+  - ✅ Prompts para usar en ComfyUI, LTX, Runway, Luma, HeyGen, etc.
+  - ✅ Previsualizaciones Hyperframes (HTML animado con texto y transiciones)
 - ❌ No publica en redes automáticamente — el usuario copia y pega.
 - ❌ No entrena ni modifica LoRAs.
+
+## Estrategia de Render (Futuro)
+
+- **Corto plazo**: Hyperframes para previsualización instantánea en navegador
+- **Backup / Largo plazo**: Remotion como alternativa para renders más complejos, determinísticos y controlados

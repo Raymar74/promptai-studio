@@ -10,7 +10,8 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import CopyButton from "@/components/CopyButton";
-import { ArrowLeft, Trash2, Video, Type, Hash, RefreshCw, Images, MessageSquare, FileText, Image } from "lucide-react";
+import HyperframesPreview from "@/components/HyperframesPreview";
+import { ArrowLeft, Trash2, Video, Type, Hash, RefreshCw, Images, MessageSquare, FileText, Image, Play } from "lucide-react";
 import { toast } from "sonner";
 
 export default function PackDetailPage() {
@@ -99,13 +100,21 @@ export default function PackDetailPage() {
 
       {/* VIDEO / REEL */}
       {isVideo && (
-        <Tabs defaultValue="script">
+        <Tabs defaultValue="preview">
           <TabsList className="flex-wrap h-auto">
+            <TabsTrigger value="preview"><Play className="h-3.5 w-3.5 mr-1.5" />Preview</TabsTrigger>
             <TabsTrigger value="script"><Type className="h-3.5 w-3.5 mr-1.5" />Guion</TabsTrigger>
             <TabsTrigger value="shots"><Video className="h-3.5 w-3.5 mr-1.5" />Tomas / I2V</TabsTrigger>
             <TabsTrigger value="caption"><Hash className="h-3.5 w-3.5 mr-1.5" />Caption</TabsTrigger>
             <TabsTrigger value="meta">Publicar</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="preview" className="mt-6 flex justify-center">
+            <HyperframesPreview
+              htmlContent={c.preview_html}
+              aspectRatio="vertical"
+            />
+          </TabsContent>
 
           <TabsContent value="script" className="space-y-4 mt-6">
             <ScriptBlock label="Hook (0-3s)" text={c.script.hook} />
@@ -145,13 +154,21 @@ export default function PackDetailPage() {
 
       {/* CAROUSEL */}
       {isCarousel && (
-        <Tabs defaultValue="slides">
+        <Tabs defaultValue="preview">
           <TabsList className="flex-wrap h-auto">
+            <TabsTrigger value="preview"><Play className="h-3.5 w-3.5 mr-1.5" />Preview</TabsTrigger>
             <TabsTrigger value="slides"><Images className="h-3.5 w-3.5 mr-1.5" />Slides</TabsTrigger>
             <TabsTrigger value="cover"><Image className="h-3.5 w-3.5 mr-1.5" />Cover</TabsTrigger>
             <TabsTrigger value="caption"><Hash className="h-3.5 w-3.5 mr-1.5" />Caption</TabsTrigger>
             <TabsTrigger value="meta">Publicar</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="preview" className="mt-6 flex justify-center">
+            <HyperframesPreview
+              htmlContent={c.preview_html}
+              aspectRatio="square"
+            />
+          </TabsContent>
 
           <TabsContent value="slides" className="space-y-4 mt-6">
             {c.slides.map((slide) => (

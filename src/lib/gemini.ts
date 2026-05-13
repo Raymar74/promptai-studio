@@ -142,6 +142,62 @@ const videoPackSchema = {
     platform: { type: Type.STRING, enum: ["video", "reel"] },
     title: { type: Type.STRING, description: "Título corto e ingenioso" },
     summary: { type: Type.STRING, description: "Resumen de 1-2 frases" },
+    preview_html: {
+      type: Type.STRING,
+      description: `HTML COMPLETO para Hyperframes Player. ESTRUCTURA OBLIGATORIA:
+
+- Contenedor raíz con: data-composition-id, data-width="1080", data-height="1920"
+- Cada elemento visible usa: class="clip", data-start, data-duration, data-track-index
+- GSAP para animaciones (desde CDN: https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js)
+- Timeline registrada en: window.__timelines["video-preview"] = gsap.timeline({ paused: true })
+- Animaciones permitidas: fade-in/out, slide-up/down, escala, opacidad
+- Color y fuente: gradiente moderno, fuente system-ui o sans-serif
+- No incluir audio (solo visual)
+
+EJEMPLO MÍNIMO:
+<div data-composition-id="video-preview" data-width="1080" data-height="1920" data-start="0"
+  style="background: linear-gradient(135deg, #0f172a, #1e293b); width: 100%; height: 100%; overflow: hidden; position: relative; font-family: system-ui, -apple-system, sans-serif;">
+  
+  <div class="clip" data-start="0" data-duration="30" data-track-index="0"
+    style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 48px;">
+    <div id="text-1" class="clip" data-start="0" data-duration="5"
+      style="color: white; font-size: 72px; font-weight: 900; text-align: center; line-height: 1.1; text-shadow: 0 4px 40px rgba(0,0,0,0.5);">
+      ¿Sabías que...
+    </div>
+    <div id="text-2" class="clip" data-start="5" data-duration="5"
+      style="color: #38bdf8; font-size: 56px; font-weight: 800; text-align: center; line-height: 1.2; text-shadow: 0 4px 40px rgba(0,0,0,0.5);">
+      El tiempo es relativo
+    </div>
+    <div id="text-3" class="clip" data-start="10" data-duration="10"
+      style="color: white; font-size: 48px; font-weight: 700; text-align: center; line-height: 1.3; max-width: 900px; text-shadow: 0 4px 40px rgba(0,0,0,0.5);">
+      Einstein demostró que la gravedad curva el espacio-tiempo
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js"></script>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.from("#text-1", { opacity: 0, y: 60, duration: 0.6, ease: "power2.out" }, 0);
+    tl.to("#text-1", { opacity: 0, y: -40, duration: 0.4 }, 4.6);
+    tl.from("#text-2", { opacity: 0, scale: 0.8, duration: 0.5, ease: "back.out(1.2)" }, 5);
+    tl.to("#text-2", { opacity: 0, scale: 1.1, duration: 0.3 }, 9.7);
+    tl.from("#text-3", { opacity: 0, y: 40, duration: 0.6, ease: "power2.out" }, 10);
+    window.__timelines = window.__timelines || {};
+    window.__timelines["video-preview"] = tl;
+  </script>
+</div>
+
+REGLAS PARA EL HTML:
+1. Toda la estructura debe estar en UN SOLO string minificado (sin saltos de linea innecesarios, pero mantener legibilidad si es posible)
+2. Cada shot del guion debe reflejarse como un grupo de elementos con data-start y data-duration coincidentes
+3. La duración total debe coincidir con la suma de los shots
+4. Usar gradientes modernos (azules, morados, oscuros)
+5. Texto blanco o de alto contraste, tamaño grande para mobile
+6. Centrar contenido vertical y horizontalmente
+7. NO incluir: imágenes externas, audio, iframes, estilos inline de safety-inseguros
+8. TODO el texto del guion debe aparecer en el preview (como texto superpuesto animado)
+`
+    },
     script: {
       type: Type.OBJECT,
       properties: {
@@ -172,7 +228,7 @@ const videoPackSchema = {
     caption: { type: Type.STRING },
     hashtags: { type: Type.ARRAY, items: { type: Type.STRING } },
   },
-  required: ["platform", "title", "summary", "script", "shots", "cover_image_prompt", "cover_i2v_prompt", "caption", "hashtags"]
+  required: ["platform", "title", "summary", "preview_html", "script", "shots", "cover_image_prompt", "cover_i2v_prompt", "caption", "hashtags"]
 };
 
 // ============================================================
@@ -185,6 +241,74 @@ const carouselPackSchema = {
     platform: { type: Type.STRING, enum: ["carousel"] },
     title: { type: Type.STRING, description: "Título corto e ingenioso" },
     summary: { type: Type.STRING, description: "Resumen de 1-2 frases" },
+    preview_html: {
+      type: Type.STRING,
+      description: `HTML COMPLETO para Hyperframes Player (CARRUSEL). ESTRUCTURA OBLIGATORIA:
+
+- Contenedor raíz con: data-composition-id, data-width="1080", data-height="1080" (CUADRADO)
+- Cada slide usa: class="clip", data-start, data-duration, data-track-index
+- GSAP para animaciones y transiciones entre slides
+- Timeline registrada en: window.__timelines["carousel-preview"] = gsap.timeline({ paused: true })
+- Cada slide dura 4 segundos (transición 0.5s entre ellos)
+- Overlay_text del slide DEBE aparecer como texto grande superpuesto
+
+EJEMPLO MÍNIMO:
+<div data-composition-id="carousel-preview" data-width="1080" data-height="1080" data-start="0"
+  style="background: linear-gradient(135deg, #0f172a, #1e293b); width: 100%; height: 100%; overflow: hidden; position: relative; font-family: system-ui, -apple-system, sans-serif;">
+  
+  <!-- Slide 1 -->
+  <div class="clip" data-start="0" data-duration="4" data-track-index="1"
+    style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 80px;">
+    <div id="slide1"
+      style="color: white; font-size: 64px; font-weight: 900; text-align: center; line-height: 1.1; text-shadow: 0 4px 40px rgba(0,0,0,0.5);">
+      Slide 1: Hook impactante
+    </div>
+  </div>
+
+  <!-- Slide 2 -->
+  <div class="clip" data-start="4" data-duration="4" data-track-index="2"
+    style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 80px; background: linear-gradient(135deg, #1e293b, #334155);">
+    <div id="slide2"
+      style="color: #38bdf8; font-size: 56px; font-weight: 800; text-align: center; line-height: 1.2; text-shadow: 0 4px 40px rgba(0,0,0,0.5);">
+      Slide 2: Desarrollo
+    </div>
+  </div>
+
+  <!-- Slide 3 -->
+  <div class="clip" data-start="8" data-duration="4" data-track-index="3"
+    style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 80px; background: linear-gradient(135deg, #15803d, #166534);">
+    <div id="slide3"
+      style="color: #bbf7d0; font-size: 52px; font-weight: 800; text-align: center; line-height: 1.2; text-shadow: 0 4px 40px rgba(0,0,0,0.5);">
+      Slide 3: CTA / Cierre
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js"></script>
+  <script>
+    const tl = gsap.timeline({ paused: true, repeat: -1 });
+    // Slide 1 in/out
+    tl.from("#slide1", { opacity: 0, y: 60, duration: 0.5, ease: "power2.out" }, 0);
+    tl.to("#slide1", { opacity: 0, y: -40, duration: 0.4 }, 3.6);
+    // Slide 2 in/out
+    tl.from("#slide2", { opacity: 0, x: 200, duration: 0.5, ease: "power2.out" }, 4);
+    tl.to("#slide2", { opacity: 0, x: -200, duration: 0.4 }, 7.6);
+    // Slide 3 in
+    tl.from("#slide3", { opacity: 0, scale: 0.7, duration: 0.5, ease: "back.out(1.2)" }, 8);
+    tl.to("#slide3", { opacity: 0, duration: 0.4 }, 11.6);
+    window.__timelines = window.__timelines || {};
+    window.__timelines["carousel-preview"] = tl;
+  </script>
+</div>
+
+REGLAS:
+1. Formato: 1080x1080 CUADRADO
+2. Cada slide con gradiente diferente o distinto color de fondo
+3. Overlay_text de cada slide como texto grande y centrado
+4. Transiciones distintas entre slides (fade, slide, escala)
+5. Repetición infinita (repeat: -1)
+6. Todo el texto del overlay_text DEBE aparecer
+`
+    },
     slides: {
       type: Type.ARRAY,
       items: {
@@ -203,7 +327,7 @@ const carouselPackSchema = {
     first_comment: { type: Type.STRING, description: "Primer comentario fijado (para engagement)." },
     hashtags: { type: Type.ARRAY, items: { type: Type.STRING } },
   },
-  required: ["platform", "title", "summary", "slides", "cover_image_prompt", "caption", "hashtags"]
+  required: ["platform", "title", "summary", "preview_html", "slides", "cover_image_prompt", "caption", "hashtags"]
 };
 
 // ============================================================
@@ -441,7 +565,21 @@ OTRAS REGLAS:
    - Shots intermedios (Desarrollo).
    - Shot final (Punchline/Cierre). ¡NUNCA expliques el chiste!
 
-4. UN SOLO PROMPT DE IMAGEN: Usa cover_image_prompt para describir la imagen base inspirada en el guion. ESTA IMAGEN DEBE DEFINIR EL ENTORNO (background) de todo el video.`;
+4. UN SOLO PROMPT DE IMAGEN: Usa cover_image_prompt para describir la imagen base inspirada en el guion. ESTA IMAGEN DEBE DEFINIR EL ENTORNO (background) de todo el video.
+
+5. PREVIEW_HTML OBLIGATORIO:
+   - Además de los prompts, DEBES generar un preview_html COMPLETO para Hyperframes.
+   - Resolución: 1080x1920 VERTICAL (formato reel).
+   - Cada shot del guion debe aparecer como un bloque de texto animado.
+   - Usa los diálogos (prompt_dialogo) como el texto de cada shot.
+   - Usa GSAP para animaciones: fade-in, fade-out, slide-up, scale.
+   - Colorea el texto según la personalidad: rojo para hostilidad/conflicto, azul para calma/reflexión, verde para humor/alegría, naranja para energía.
+   - Gradientes modernos de fondo (oscuros: slate, azul, morado).
+   - Texto GRANDE (56px-80px) y alto contraste.
+   - Timeline registrada en window.__timelines["video-preview"].
+   - Usa el schema de ejemplo como referencia ESTRICTA.
+   - TODO EL TEXTO DEL GUION (hook, body, punchline, cada prompt_dialogo de shot) debe aparecer animado.
+`;
 }
 
 function buildCarouselSystemPrompt(c: CharacterProfile): string {
@@ -472,7 +610,19 @@ REGLAS DE IDIOMA:
 - overlay_text, caption, first_comment: ESPAÑOL.
 - image_prompt, cover_image_prompt: INGLÉS.
 
-El LoRA trigger "${c.lora_trigger}" debe aparecer SIEMPRE al inicio de TODOS los image_prompt.`;
+El LoRA trigger "${c.lora_trigger}" debe aparecer SIEMPRE al inicio de TODOS los image_prompt.
+
+6. PREVIEW_HTML OBLIGATORIO PARA CARRUSEL:
+   - Además de los slides, DEBES generar un preview_html COMPLETO para Hyperframes.
+   - Resolución: 1080x1080 CUADRADO.
+   - Cada slide debe aparecer con su overlay_text como texto animado grande.
+   - Transiciones distintas entre cada slide: fade, slide-right, slide-left, scale-up, zoom.
+   - Repetición infinita (repeat: -1).
+   - Cada slide dura ~4 segundos con 0.5s de transición.
+   - Usa el schema de ejemplo como referencia ESTRICTA.
+   - Gradientes de fondo distintos por slide (pero mismo tono general).
+   - Timeline registrada en window.__timelines["carousel-preview"].
+`;
 }
 
 function buildThreadSystemPrompt(c: CharacterProfile): string {

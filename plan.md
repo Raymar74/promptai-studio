@@ -31,6 +31,11 @@ El proyecto está en **producción activa** en Vercel. Las funcionalidades core 
   - **Reel/Video:** Guion + Shots I2V (formato tradicional)
   - **Carrusel:** Slides con `image_prompt`, `overlay_text`, `alt_text`
   - **Hilo (X/LinkedIn):** Posts con `content`, `is_hook`, `is_cta`
+- **Previsualización Hyperframes (NUEVO):** Ahora genera **preview_html** para visualización instantánea en navegador:
+  - **Reel/Video:** 1080x1920 vertical con animaciones GSAP
+  - **Carrusel:** 1080x1080 cuadrado con transiciones entre slides
+  - Componente `<HyperframesPreview>` en `PackDetail.tsx` (tab "Preview" por defecto)
+- **Estrategia de render (Backup:** Hyperframes para preview + Remotion como backup para futuro render final.
 - Selección de personaje activo.
 - Configuración de tema, duraciones (total y por clip), Factor WPM y Intensidad de Rasgos Psicológicos.
 - Generación de paquetes vía Gemini 2.5 Flash con JSON estructurado.
@@ -63,6 +68,11 @@ El proyecto está en **producción activa** en Vercel. Las funcionalidades core 
   - ✅ `reglas_maestras` como directivas estructuradas
   - ✅ `dimension_humana` (vicios, miedos, tics)
   - ✅ Temperatura DINÁMICA según slider de intensidad
+- [x] **PREVIEW HYPERFRAMES:** Previsualización instantánea de Reels y Carruseles en el navegador usando `@hyperframes/player`.
+  - ✅ Generación de `preview_html` en schemas `videoPackSchema` y `carouselPackSchema`
+  - ✅ Componente `<HyperframesPreview>` con controles (play/pause/restart)
+  - ✅ Integración en `PackDetail.tsx` (tab "Preview" por defecto)
+  - ✅ Estrategia: Hyperframes para preview + Remotion como backup para render futuro
 - [ ] **Verificación del sistema de Feedback:** Confirmar que el endpoint de Formspree esté activo y recibiendo mensajes en producción.
 
 ### Prioridad media
@@ -86,6 +96,7 @@ El proyecto está en **producción activa** en Vercel. Las funcionalidades core 
 - **BD**: Supabase PostgreSQL. Tablas: `character_profiles`, `content_packs`, `feedback`, `character_history`.
 - **Storage**: Buckets `character-refs` (imágenes) y `character-voices` (audios).
 - **IA**: `@google/genai` v2 · `gemini-2.5-flash`. Corre 100% en el cliente (sin Edge Functions).
+- **Previsualización**: `@hyperframes/player` Web Component para previews de HTML → video en navegador.
 - **Temperatura IA**: Dinámica según "Intensidad de Rasgos Psicológicos":
   - 0–30 → `0.4` (conservador)
   - 40–60 → `0.7` (balance)
@@ -123,6 +134,8 @@ Lo que hace único a PromptAI Studio es que **no solo describe la personalidad c
 
 ## Lo que la app NO hace (aclaración de scope)
 
-- No genera imágenes ni videos finales — entrega prompts para el pipeline del usuario (ComfyUI, LTX, Runway, Luma...).
+- **NO genera videos finales MP4** — entrega:
+  1. ✅ **Prompts** para el pipeline del usuario (ComfyUI, LTX, Runway, Luma...).
+  2. ✅ **Previsualizaciones Hyperframes** (HTML animado con texto y transiciones) para ver la estructura instantáneamente.
 - No publica en redes automáticamente.
 - No entrena ni modifica LoRAs.

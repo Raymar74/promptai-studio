@@ -95,6 +95,7 @@ export interface VideoPackContent {
   cover_i2v_prompt: string;
   caption: string;
   hashtags: string[];
+  preview_html?: string;
 }
 
 // ============================================================
@@ -117,6 +118,7 @@ export interface CarouselPackContent {
   caption: string;
   hashtags: string[];
   first_comment?: string;
+  preview_html?: string;
 }
 
 // ============================================================
