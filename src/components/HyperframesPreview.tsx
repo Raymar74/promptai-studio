@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Card } from "@/components/ui/card";
-import { Play, Pause, SkipBack, Loader2, AlertTriangle } from "lucide-react";
+import { Play, Pause, SkipBack, Loader2, AlertTriangle, Bug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -29,21 +29,6 @@ declare global {
   }
 }
 
-interface HyperframesPlayerElement extends HTMLElement {
-  play: () => Promise<void>;
-  pause: () => void;
-  seek: (time: number) => void;
-  currentTime: number;
-  duration: number;
-  paused: boolean;
-  ready: boolean;
-  addEventListener: (
-    type: "ready" | "play" | "pause" | "ended" | "timeupdate" | "error" | "playbackerror",
-    listener: EventListenerOrEventListenerObject,
-    options?: boolean | AddEventListenerOptions
-  ) => void;
-}
-
 interface HyperframesPreviewProps {
   htmlContent: string | null | undefined;
   width?: number;
@@ -52,6 +37,36 @@ interface HyperframesPreviewProps {
   aspectRatio?: "vertical" | "square";
 }
 
+const SAFE_PLAY = (player: Record<string, unknown>) => {
+  try {
+    const fn = player.play as () => Promise<unknown> | undefined;
+    const p = fn?.();
+    if (p && typeof p.catch === "function") {
+      p.catch(() => {});
+    }
+  } catch {
+    // ignore
+  }
+};
+
+const SAFE_PAUSE = (player: Record<string, unknown>) => {
+  try {
+    const fn = player.pause as () => void;
+    fn?.();
+  } catch {
+    // ignore
+  }
+};
+
+const SAFE_SEEK = (player: Record<string, unknown>, t: number) => {
+  try {
+    const fn = player.seek as (time: number) => void;
+    fn?.(t);
+  } catch {
+    // ignore
+  }
+};
+
 export default function HyperframesPreview({
   htmlContent,
   width: defaultWidth,
@@ -59,117 +74,134 @@ export default function HyperframesPreview({
   className,
   aspectRatio = "vertical",
 }: HyperframesPreviewProps) {
-  const playerRef = useRef<HyperframesPlayerElement | null>(null);
-  const [isReady, setIsReady] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<HTMLElement>(null);
+  const readyFiredRef = useRef(false);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [isPlaying, setIsPlaying] = useState(false);
-  const [hasError, setHasError] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
+  const [showRaw, setShowRaw] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   const width = defaultWidth || (aspectRatio === "vertical" ? 1080 : 1080);
   const height = defaultHeight || (aspectRatio === "vertical" ? 1920 : 1080);
 
-  useEffect(() => {
-    setIsReady(false);
-    setIsPlaying(false);
-    setHasError(false);
-    setCurrentTime(0);
-  }, [htmlContent]);
-
-  useEffect(() => {
-    const player = playerRef.current;
-    if (!player) return;
-
-    const handleReady = () => {
-      setIsReady(true);
-      setHasError(false);
-    };
-
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
-    const handleTimeupdate = () => {
-      setCurrentTime(player.currentTime);
-    };
-    const handleError = () => {
-      setHasError(true);
-      setIsReady(false);
-    };
-
-    player.addEventListener("ready", handleReady);
-    player.addEventListener("play", handlePlay);
-    player.addEventListener("pause", handlePause);
-    player.addEventListener("timeupdate", handleTimeupdate);
-    player.addEventListener("error", handleError);
-    player.addEventListener("playbackerror", handleError);
-
-    return () => {
-      player.removeEventListener("ready", handleReady);
-      player.removeEventListener("play", handlePlay);
-      player.removeEventListener("pause", handlePause);
-      player.removeEventListener("timeupdate", handleTimeupdate);
-      player.removeEventListener("error", handleError);
-      player.removeEventListener("playbackerror", handleError);
-    };
-  }, [htmlContent]);
-
-  const handlePlayPause = () => {
-    const player = playerRef.current;
-    if (!player) return;
-    if (player.paused) {
-      player.play().catch(() => setHasError(true));
-    } else {
-      player.pause();
-    }
-  };
-
-  const handleRestart = () => {
-    const player = playerRef.current;
-    if (!player) return;
-    player.seek(0);
-    setCurrentTime(0);
-    if (!player.paused) {
-      player.pause();
-    }
-  };
-
-  if (!htmlContent) {
-    return (
-      <Card className={cn("flex flex-col items-center justify-center py-20 text-muted-foreground", className)}>
-        <AlertTriangle className="w-10 h-10 mb-4 opacity-50" />
-        <p className="text-sm">Este paquete no tiene preview generado</p>
-        <p className="text-xs mt-1 opacity-60">Los paquetes generados antes de esta actualización no incluyen previsualización.</p>
-      </Card>
-    );
-  }
-
-  if (hasError) {
-    return (
-      <Card className={cn("flex flex-col items-center justify-center py-20 text-muted-foreground", className)}>
-        <AlertTriangle className="w-10 h-10 mb-4 text-destructive/70" />
-        <p className="text-sm">Error al cargar la previsualización</p>
-        <p className="text-xs mt-1 opacity-60">El formato del HTML puede ser incorrecto.</p>
-      </Card>
-    );
-  }
-
   const maxContainerWidth = aspectRatio === "vertical" ? 360 : 500;
-  const scaleFactor = aspectRatio === "vertical" ? maxContainerWidth / width : maxContainerWidth / width;
+  const scaleFactor = maxContainerWidth / width;
   const displayWidth = Math.min(width, maxContainerWidth);
   const displayHeight = height * scaleFactor;
 
+  useEffect(() => {
+    readyFiredRef.current = false;
+    setStatus("loading");
+    setIsPlaying(false);
+    setShowRaw(false);
+
+    const el = containerRef.current?.querySelector("hyperframes-player");
+    if (el) {
+      playerRef.current = el;
+
+      const onReady = () => {
+        readyFiredRef.current = true;
+        setStatus("ready");
+      };
+      const onError = () => setStatus("error");
+      const onPlay = () => setIsPlaying(true);
+      const onPause = () => setIsPlaying(false);
+
+      el.addEventListener("ready", onReady);
+      el.addEventListener("error", onError);
+      el.addEventListener("playbackerror", onError);
+      el.addEventListener("play", onPlay);
+      el.addEventListener("pause", onPause);
+
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => {
+        if (!readyFiredRef.current) {
+          setStatus("error");
+        }
+      }, 10000);
+
+      return () => {
+        el.removeEventListener("ready", onReady);
+        el.removeEventListener("error", onError);
+        el.removeEventListener("playbackerror", onError);
+        el.removeEventListener("play", onPlay);
+        el.removeEventListener("pause", onPause);
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      };
+    }
+  }, [htmlContent]);
+
+  const handlePlayPause = useCallback(() => {
+    const player = playerRef.current;
+    if (!player) return;
+    if (isPlaying) {
+      SAFE_PAUSE(player);
+      setIsPlaying(false);
+    } else {
+      SAFE_PLAY(player);
+      setIsPlaying(true);
+    }
+  }, [isPlaying]);
+
+  const handleRestart = useCallback(() => {
+    const player = playerRef.current;
+    if (!player) return;
+    SAFE_SEEK(player, 0);
+    SAFE_PAUSE(player);
+    setIsPlaying(false);
+  }, []);
+
+  if (!htmlContent || !htmlContent.trim()) {
+    return (
+      <Card className={cn("flex flex-col items-center justify-center py-20 text-muted-foreground", className)}>
+        <AlertTriangle className="w-10 h-10 mb-4 opacity-50" />
+        <p className="text-sm">Preview no disponible</p>
+        <p className="text-xs mt-1 opacity-60">Este paquete no incluye previsualización HTML.</p>
+      </Card>
+    );
+  }
+
+  if (showRaw) {
+    return (
+      <Card className={cn("p-4", className)}>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-medium text-sm">HTML generado por Gemini</h3>
+          <Button variant="outline" size="sm" onClick={() => setShowRaw(false)}>
+            Volver al preview
+          </Button>
+        </div>
+        <pre className="text-xs bg-muted p-3 rounded overflow-auto max-h-96 border font-mono leading-relaxed whitespace-pre-wrap break-words">
+          {htmlContent}
+        </pre>
+      </Card>
+    );
+  }
+
   return (
-    <div className={cn("flex flex-col items-center", className)}>
+    <div className={cn("flex flex-col items-center", className)} ref={containerRef}>
       <div
         className="relative border border-border rounded-lg overflow-hidden shadow-lg bg-black"
         style={{ width: displayWidth, height: displayHeight }}
       >
-        {!isReady && (
+        {status === "loading" && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         )}
 
+        {status === "error" && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/90 z-10 p-6 text-center">
+            <AlertTriangle className="w-8 h-8 text-destructive/70 mb-2" />
+            <p className="text-sm text-muted-foreground mb-3">No se pudo cargar la previsualización</p>
+            <Button variant="outline" size="sm" onClick={() => setShowRaw(true)} className="gap-1.5">
+              <Bug className="w-3.5 h-3.5" /> Ver HTML generado
+            </Button>
+          </div>
+        )}
+
         <hyperframes-player
-          ref={playerRef as React.Ref<HTMLElement>}
+          ref={playerRef}
           srcdoc={htmlContent}
           width={width}
           height={height}
@@ -202,14 +234,14 @@ export default function HyperframesPreview({
               </Button>
             </div>
             <div className="text-xs text-white/70">
-              {aspectRatio === "vertical" ? "Reel (1080x1920)" : "Carrusel (1080x1080)"}
+              {aspectRatio === "vertical" ? "Reel" : "Carrusel"} (1080×{aspectRatio === "vertical" ? "1920" : "1080"})
             </div>
           </div>
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground mt-3 text-center">
-        La previsualización muestra la estructura y animación del texto. Usa los prompts para generar el video real con imágenes.
+      <p className="text-xs text-muted-foreground mt-3 text-center max-w-md">
+        Preview animado del texto. Usa los prompts en las otras pestañas para generar el video real.
       </p>
     </div>
   );
