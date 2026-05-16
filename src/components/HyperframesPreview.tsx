@@ -132,14 +132,27 @@ export default function HyperframesPreview({
     }
   }, [htmlContent]);
 
+  useEffect(() => {
+    if (htmlContent) {
+      console.log("HTML Generado por la IA:", htmlContent);
+    } else {
+      console.log("HTML Generado por la IA está vacío o nulo.");
+    }
+  }, [htmlContent]);
+
   const handlePlayPause = useCallback(() => {
     const player = playerRef.current;
     if (!player) return;
+    
+    const iframe = player.shadowRoot?.querySelector('iframe') || player.querySelector('iframe');
+    
     if (isPlaying) {
       SAFE_PAUSE(player);
+      try { iframe?.contentWindow?.postMessage('pause', '*'); } catch (e) {}
       setIsPlaying(false);
     } else {
       SAFE_PLAY(player);
+      try { iframe?.contentWindow?.postMessage('play', '*'); } catch (e) {}
       setIsPlaying(true);
     }
   }, [isPlaying]);
@@ -149,6 +162,12 @@ export default function HyperframesPreview({
     if (!player) return;
     SAFE_SEEK(player, 0);
     SAFE_PAUSE(player);
+    const iframe = player.shadowRoot?.querySelector('iframe') || player.querySelector('iframe');
+    try { 
+      iframe?.contentWindow?.postMessage('pause', '*'); 
+      // Force GSAP restart if possible via custom message
+      iframe?.contentWindow?.postMessage('restart', '*'); 
+    } catch (e) {}
     setIsPlaying(false);
   }, []);
 
@@ -201,10 +220,52 @@ export default function HyperframesPreview({
         )}
 
         <hyperframes-player
-          ref={playerRef}
-          srcdoc={htmlContent}
+          ref={playerRef as any}
+          srcdoc={(() => {
+            if (!htmlContent) return "";
+            let finalHtml = htmlContent;
+            
+            // Fix para los backgrounds opacos que la IA pone por error en cada clip
+            const styleFix = `<style>
+              html, body { width: 100%; height: 100%; margin: 0; padding: 0; background: transparent; }
+              .clip { background: transparent !important; }
+            </style>`;
+            
+            // Fix para asegurar que GSAP se reproduzca aunque el player falle en iniciarlo
+            const scriptFix = `<script>
+              window.addEventListener('message', (e) => {
+                if (!window.__timelines) return;
+                const tls = Object.values(window.__timelines);
+                if (e.data === 'play') {
+                  tls.forEach(tl => tl.play());
+                } else if (e.data === 'pause') {
+                  tls.forEach(tl => tl.pause());
+                } else if (e.data === 'restart') {
+                  tls.forEach(tl => { tl.pause(); tl.progress(0); });
+                }
+              });
+              // Auto-play de contingencia
+              setTimeout(() => {
+                if (window.__timelines) Object.values(window.__timelines).forEach(tl => tl.play());
+              }, 1000);
+            </script>`;
+
+            if (finalHtml.includes("<html")) {
+              return finalHtml.replace('</head>', styleFix + '</head>').replace('</body>', scriptFix + '</body>');
+            }
+            return `<!DOCTYPE html><html><head><meta charset="utf-8">${styleFix}</head><body>${finalHtml}${scriptFix}</body></html>`;
+          })()}
           width={width}
           height={height}
+          style={{
+            width: `${width}px`,
+            height: `${height}px`,
+            transform: `scale(${scaleFactor})`,
+            transformOrigin: "top left",
+            position: "absolute",
+            top: 0,
+            left: 0
+          }}
           muted
           loop
         />
@@ -233,7 +294,10 @@ export default function HyperframesPreview({
                 )}
               </Button>
             </div>
-            <div className="text-xs text-white/70">
+            <div className="text-xs text-white/70 flex items-center gap-2">
+              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-white/50 hover:text-white" onClick={() => setShowRaw(true)}>
+                Ver HTML
+              </Button>
               {aspectRatio === "vertical" ? "Reel" : "Carrusel"} (1080×{aspectRatio === "vertical" ? "1920" : "1080"})
             </div>
           </div>
@@ -243,6 +307,12 @@ export default function HyperframesPreview({
       <p className="text-xs text-muted-foreground mt-3 text-center max-w-md">
         Preview animado del texto. Usa los prompts en las otras pestañas para generar el video real.
       </p>
+
+      {/* DEBUG BLOCK FORCED */}
+      <div className="mt-4 p-4 border-2 border-red-500 bg-zinc-950 text-white w-full max-w-2xl overflow-auto text-xs whitespace-pre-wrap max-h-96 text-left">
+        <strong className="text-red-500 mb-2 block">DEBUG HTML CONTENT (PARA VER POR QUÉ FALLA):</strong>
+        {htmlContent}
+      </div>
     </div>
   );
 }
