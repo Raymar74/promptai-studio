@@ -71,7 +71,8 @@ El proyecto está en **producción activa** en Vercel. Las funcionalidades core 
 - [x] **PREVIEW HYPERFRAMES:** Previsualización instantánea de Reels y Carruseles en el navegador usando `@hyperframes/player`.
   - ✅ Generación de `preview_html` en schemas `videoPackSchema` y `carouselPackSchema`
   - ✅ Componente `<HyperframesPreview>` con controles (play/pause/restart)
-  - ✅ Integración en `PackDetail.tsx` (tab "Preview" por defecto)
+  - ✅ Fix de bugs de renderizado (capas opacas ocultas, soporte GSAP sandbox, fix de height/width 100%)
+  - ✅ Modo edición de HTML en vivo (textarea editable y guardado en Supabase)
   - ✅ Estrategia: Hyperframes para preview + Remotion como backup para render futuro
 - [ ] **Verificación del sistema de Feedback:** Confirmar que el endpoint de Formspree esté activo y recibiendo mensajes en producción.
 

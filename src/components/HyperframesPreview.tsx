@@ -31,6 +31,7 @@ declare global {
 
 interface HyperframesPreviewProps {
   htmlContent: string | null | undefined;
+  onHtmlChange?: (newHtml: string) => void;
   width?: number;
   height?: number;
   className?: string;
@@ -69,6 +70,7 @@ const SAFE_SEEK = (player: Record<string, unknown>, t: number) => {
 
 export default function HyperframesPreview({
   htmlContent,
+  onHtmlChange,
   width: defaultWidth,
   height: defaultHeight,
   className,
@@ -80,6 +82,7 @@ export default function HyperframesPreview({
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [isPlaying, setIsPlaying] = useState(false);
   const [showRaw, setShowRaw] = useState(false);
+  const [editableHtml, setEditableHtml] = useState(htmlContent || "");
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   const width = defaultWidth || (aspectRatio === "vertical" ? 1080 : 1080);
@@ -91,6 +94,7 @@ export default function HyperframesPreview({
   const displayHeight = height * scaleFactor;
 
   useEffect(() => {
+    setEditableHtml(htmlContent || "");
     readyFiredRef.current = false;
     setStatus("loading");
     setIsPlaying(false);
@@ -182,17 +186,27 @@ export default function HyperframesPreview({
   }
 
   if (showRaw) {
+    const handleSave = () => {
+      onHtmlChange?.(editableHtml);
+      setShowRaw(false);
+    };
+
     return (
-      <Card className={cn("p-4", className)}>
+      <Card className={cn("p-4 w-full max-w-2xl", className)}>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-medium text-sm">HTML generado por Gemini</h3>
-          <Button variant="outline" size="sm" onClick={() => setShowRaw(false)}>
-            Volver al preview
-          </Button>
+          <h3 className="font-medium text-sm">Editar HTML</h3>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowRaw(false)}>Cancelar</Button>
+            {onHtmlChange && <Button size="sm" onClick={handleSave}>Guardar cambios</Button>}
+          </div>
         </div>
-        <pre className="text-xs bg-muted p-3 rounded overflow-auto max-h-96 border font-mono leading-relaxed whitespace-pre-wrap break-words">
-          {htmlContent}
-        </pre>
+        <textarea
+          className="w-full h-96 text-xs bg-muted p-3 rounded overflow-auto border font-mono leading-relaxed whitespace-pre-wrap break-words focus:outline-none focus:ring-1 focus:ring-primary"
+          value={editableHtml}
+          onChange={(e) => setEditableHtml(e.target.value)}
+          spellCheck={false}
+        />
+        <p className="text-xs text-muted-foreground mt-2">Puedes modificar los diálogos u otros elementos del HTML y guardar los cambios.</p>
       </Card>
     );
   }
@@ -307,12 +321,6 @@ export default function HyperframesPreview({
       <p className="text-xs text-muted-foreground mt-3 text-center max-w-md">
         Preview animado del texto. Usa los prompts en las otras pestañas para generar el video real.
       </p>
-
-      {/* DEBUG BLOCK FORCED */}
-      <div className="mt-4 p-4 border-2 border-red-500 bg-zinc-950 text-white w-full max-w-2xl overflow-auto text-xs whitespace-pre-wrap max-h-96 text-left">
-        <strong className="text-red-500 mb-2 block">DEBUG HTML CONTENT (PARA VER POR QUÉ FALLA):</strong>
-        {htmlContent}
-      </div>
     </div>
   );
 }

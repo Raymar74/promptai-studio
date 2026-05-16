@@ -47,6 +47,22 @@ export default function PackDetailPage() {
     setPack({ ...pack, published: v, published_at: v ? new Date().toISOString() : null });
   };
 
+  const updatePreviewHtml = async (newHtml: string) => {
+    if (!pack) return;
+    const newContent = { ...pack.content, preview_html: newHtml };
+    const { error } = await supabase
+      .from("content_packs")
+      .update({ content: newContent })
+      .eq("id", pack.id);
+    
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("HTML actualizado");
+    setPack({ ...pack, content: newContent as PackContent });
+  };
+
   const updateLink = async (link: string) => {
     const { error } = await supabase.from("content_packs").update({ published_link: link }).eq("id", pack.id);
     if (error) toast.error(error.message);
@@ -112,6 +128,7 @@ export default function PackDetailPage() {
           <TabsContent value="preview" className="mt-6 flex justify-center">
             <HyperframesPreview
               htmlContent={c.preview_html}
+              onHtmlChange={updatePreviewHtml}
               aspectRatio="vertical"
             />
           </TabsContent>
@@ -166,6 +183,7 @@ export default function PackDetailPage() {
           <TabsContent value="preview" className="mt-6 flex justify-center">
             <HyperframesPreview
               htmlContent={c.preview_html}
+              onHtmlChange={updatePreviewHtml}
               aspectRatio="square"
             />
           </TabsContent>
